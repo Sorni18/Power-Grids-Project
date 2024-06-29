@@ -1,0 +1,1652 @@
+---
+title: "Proyecto 2"
+output: html_document
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readxl)
+library(ggplot2)
+library(knitr)
+library(mapSpain)
+library(mapSpain)
+library(tidyverse)
+library(ggplot2)
+library(readxl)
+library(shiny)
+library(leaflet)
+library(plotly)
+library(sf)
+library(htmltools)
+library(dplyr)
+library(rnaturalearth)
+library(rnaturalearthdata)
+```
+
+## R Markdown
+
+```{r}
+datos <- read.csv("file:///C:/Users/muedr/OneDrive/Documentos/Proyecto 2/Andalucía_gen.csv")
+View(datos)
+meses <- c()
+anios <- 2013:2023
+for (anio in anios){
+  for (mes in 1:12){
+     mes_formateado <- sprintf("%d-%02d-01", anio, mes)
+     meses <- c(meses, mes_formateado)
+  }
+}
+mes <- as.Date(meses)
+
+ggplot(data = datos, aes(x = mes)) +
+  scale_x_date(date_labels = "%b %Y", date_breaks = "1 month") +
+  geom_line(data=datos, aes(x=mes, y = Hidráulica, color = "Hidráulica")) +
+  geom_line(data=datos, aes(x=mes, y = Turbinación.bombeo, color = "Turbinación.bombeo"))+
+  geom_line(data=datos, aes(x=mes, y = Carbón, color = "Carbón")) +
+  geom_line(data=datos, aes(x=mes, y = Ciclo.combinado, color = "Ciclo.combinado")) +
+  geom_line(data=datos ,aes(x=mes, y = Eólica, color = "Eólica")) +
+  geom_line(data=datos ,aes(x=mes, y = Solar.fotovoltaica, color = "Solar.fotovoltaica")) +
+  geom_line(data=datos ,aes(x=mes, y = Solar.térmica, color = "Solar.térmica")) +
+  geom_line(data=datos ,aes(x=mes, y = Otras.renovables, color = "Otras.renovables")) +
+  geom_line(data=datos ,aes(x=mes, y = Cogeneración, color = "Cogeneración")) +
+  geom_line(data=datos ,aes(x=mes, y = Residuos.no.renovables, color = "Residuos.no.renovables")) +
+  labs(x = "mes", y = "Valor") +
+  scale_color_manual(name = "Tipos de energía",
+                     values = c("Hidráulica" = "blue", "Turbinación.bombeo" = "red",
+                                "Carbón" = "green",
+                                "Ciclo.combinado" = "purple", "Eólica" = "orange",                                          "Solar.fotovoltaica"="yellow", "Solar.térmica"="grey",
+                                "Otras.renovables"="black", "Cogeneración"="brown",
+                                "Generación.total"="pink","Residuos.no.renovables"="gold"))
+
+View(cor(datos[,-1]))
+```
+
+-Correlaciones Positivas Notables:
+
+Generación.total y Ciclo.combinado (0.607): Sugiere que una mayor
+generación total se relaciona con una mayor utilización de ciclo
+combinado. Cogeneración y Carbón (0.525): Indica que la cogeneración
+está estrechamente ligada a la generación mediante carbón. Solar.térmica
+e Hidráulica (0.487): Muestra una tendencia de comportamiento conjunto
+entre estas dos fuentes renovables.
+
+-Correlaciones Negativas Significativas:
+
+Solar.fotovoltaica y Cogeneración (-0.726): La generación de energía
+solar fotovoltaica se correlaciona negativamente con la cogeneración,
+posiblemente debido a la diferencia en el momento de generación (día vs.
+continuo). Solar.fotovoltaica y Carbón (-0.629): Indica una relación
+inversa, donde un aumento en la energía solar fotovoltaica se asocia con
+una disminución en la generación de carbón.
+
+-Correlaciones con Generación.total:
+
+Positivas con Ciclo.combinado (0.607) y Solar.térmica (0.559): Sugiere
+que estos métodos de generación contribuyen significativamente a la
+generación total. Negativa con Turbinación.bombeo (-0.395): Puede
+indicar que el bombeo-turbinación es utilizado más en situaciones de
+exceso de generación para almacenar energía.
+
+```{r}
+datos1 <- read.csv("~/Proyecto 2/Aragón_gen.csv")
+
+meses <- c()
+anios <- 2013:2023
+for (anio in anios){
+  for (mes in 1:12){
+     mes_formateado <- sprintf("%d-%02d-01", anio, mes)
+     meses <- c(meses, mes_formateado)
+  }
+}
+mes <- as.Date(meses)
+
+ggplot(data = datos1, aes(x = mes)) +
+  scale_x_date(date_labels = "%b %Y", date_breaks = "1 month") +
+  geom_line(data=datos1, aes(x=mes, y = Hidráulica, color = "Hidráulica")) +
+  geom_line(data=datos1, aes(x=mes, y = `Turbinación.bombeo`, color = "Turbinación.bombeo"))+
+  geom_line(data=datos1, aes(x=mes, y = Carbón, color = "Carbón")) +
+  geom_line(data=datos1, aes(x=mes, y = `Ciclo.combinado`, color = "Ciclo.combinado")) +
+  geom_line(data=datos1 ,aes(x=mes, y = Eólica, color = "Eólica")) +
+  geom_line(data=datos1 ,aes(x=mes, y = Solar.fotovoltaica, color = "Solar.fotovoltaica")) +
+  geom_line(data=datos1 ,aes(x=mes, y = Otras.renovables, color = "Otras.renovables")) +
+  geom_line(data=datos1 ,aes(x=mes, y = Cogeneración, color = "Cogeneración")) +
+  geom_line(data=datos1 ,aes(x=mes, y = Residuos.no.renovables, color = "Residuos.no.renovables")) +
+  labs(x = "mes", y = "Valor") +
+  scale_color_manual(name = "Tipos de energía",
+                     values = c("Hidráulica" = "blue", "Turbinación.bombeo" = "red",
+                                "Carbón" = "green",
+                                "Ciclo.combinado" = "purple", "Eólica" = "orange",                                          "Solar.fotovoltaica"="yellow", "Solar.térmica"="grey",
+                                "Otras.renovables"="black", "Cogeneración"="brown",
+                                "Generación.total"="pink","Residuos.no.renovables"="gold"))
+View(cor(datos1[,-1]))
+```
+
+-Correlaciones Positivas Notables: Las fuentes de energía como la eólica
+y la solar fotovoltaica muestran fuertes relaciones positivas tanto
+entre sí como con la generación total, indicando que tienden a aumentar
+juntas y a contribuir significativamente a la generación total.
+
+-Correlaciones Negativas Significativas: Fuentes como la cogeneración y
+la solar fotovoltaica, y la turbinación bombeo con el carbón, muestran
+fuertes relaciones inversas, sugiriendo que tienden a comportarse de
+manera opuesta.
+
+-Generación Total: La generación total está fuertemente influenciada por
+la eólica, la solar fotovoltaica y el ciclo combinado, mientras que la
+cogeneración y los residuos no renovables tienen una influencia negativa
+moderada.
+
+```{r}
+
+datos2 <- read.csv("~/Proyecto 2/baleares_gen.csv")
+meses <- c()
+anios <- 2013:2023
+for (anio in anios){
+  for (mes in 1:12){
+     mes_formateado <- sprintf("%d-%02d-01", anio, mes)
+     meses <- c(meses, mes_formateado)
+  }
+}
+mes <- as.Date(meses)
+
+
+ggplot(data = datos2, aes(x = mes)) +
+  scale_x_date(date_labels = "%b %Y", date_breaks = "1 month") +
+  geom_line(data=datos2, aes(x=mes, y = Carbón, color = "Carbón")) +
+  geom_line(data=datos2, aes(x=mes, y = Motores.diésel, color = "Motores.diésel"))+
+  geom_line(data=datos2, aes(x=mes, y = Turbina.de.gas, color = "Turbina.de.gas")) +
+  geom_line(data=datos2, aes(x=mes, y = Ciclo.combinado, color = "Ciclo.combinado")) +
+  geom_line(data=datos2 ,aes(x=mes, y = Eólica, color = "Eólica")) +
+  geom_line(data=datos2 ,aes(x=mes, y = Solar.fotovoltaica, color = "Solar.fotovoltaica")) +
+  geom_line(data=datos2 ,aes(x=mes, y = Residuos.no.renovables, color = "Residuos.no.renovables")) +
+  geom_line(data=datos2 ,aes(x=mes, y = Otras.renovables, color = "Otras.renovables")) +
+  geom_line(data=datos2 ,aes(x=mes, y = Cogeneración, color = "Cogeneración")) +
+  geom_line(data=datos2 ,aes(x=mes, y = Residuos.renovables, color = "Residuos.renovables")) +
+  labs(x = "mes", y = "Valor") +
+  scale_color_manual(name = "Tipos de energía",
+                     values = c("Carbón" = "blue", "Motores.diésel" = "red",
+                                "Turbina.de.gas" = "green",
+                                "Ciclo.combinado" = "purple", "Eólica" = "orange",                                          "Solar.fotovoltaica"="yellow", "Residuos.no.renovables"="grey",
+                                "Otras.renovables"="black", "Cogeneración"="brown",
+                                "Generación.total"="pink","Residuos.renovables"="gold"))
+View(cor(datos2[,-1]))
+```
+
+-Correlaciones Positivas Notables: Fuentes como los motores diésel y las
+turbinas de gas muestran fuertes correlaciones positivas con la
+generación total, indicando que son contribuyentes significativos.
+
+-Correlaciones Negativas Significativas: El carbón y el ciclo combinado
+tienen una fuerte correlación negativa, sugiriendo que tienden a
+sustituirse mutuamente. La generación eólica y la solar fotovoltaica
+también muestran correlaciones negativas significativas entre sí y con
+la generación total, indicando comportamientos inversos.
+
+-Generación Total: Fuentes como los motores diésel, las turbinas de gas
+y los residuos (renovables y no renovables) muestran una fuerte
+influencia positiva en la generación total, mientras que la eólica y la
+solar fotovoltaica tienen una influencia más compleja, con correlaciones
+tanto positivas como negativas.
+
+```{r}
+datos3 <- read.csv("~/Proyecto 2/canarias_gen.csv")
+
+meses <- c()
+anios <- 2013:2023
+for (anio in anios){
+  for (mes in 1:12){
+     mes_formateado <- sprintf("%d-%02d-01", anio, mes)
+     meses <- c(meses, mes_formateado)
+  }
+}
+mes <- as.Date(meses)
+
+ggplot(data = datos3, aes(x = mes)) +
+  scale_x_date(date_labels = "%b %Y", date_breaks = "1 month") +
+  geom_line(data=datos3, aes(x=mes, y = Hidráulica, color = "Hidráulica")) +
+  geom_line(data=datos3, aes(x=mes, y = Motores.diésel, color = "Motores.diésel"))+
+  geom_line(data=datos3, aes(x=mes, y = Turbina.de.gas, color = "Turbina.de.gas")) +
+  geom_line(data=datos3, aes(x=mes, y = Turbina.de.vapor, color = "Turbina.de.vapor")) +
+  geom_line(data=datos3 ,aes(x=mes, y = Ciclo.combinado, color = "Ciclo.combinado")) +
+  geom_line(data=datos3 ,aes(x=mes, y = Eólica, color = "Eólica")) +
+  geom_line(data=datos3 ,aes(x=mes, y = Solar.fotovoltaica, color = "Solar.fotovoltaica")) +
+  geom_line(data=datos3 ,aes(x=mes, y = Otras.renovables, color = "Otras.renovables")) +     geom_line(data=datos3 ,aes(x=mes, y = Hidroeólica, color = "Hidroeólica")) +
+  labs(x = "mes", y = "Valor") +
+  scale_color_manual(name = "Tipos de energía",
+                     values = c("Hidráulica" = "blue", "Motores.diésel" = "red",
+                                "Turbina.de.gas" = "green",
+                                "Turbina.de.vapor" = "purple", "Ciclo.combinado" = "orange",                                          "Solar.fotovoltaica"="yellow", "Eólica"="grey",
+                                "Solar.fotovoltaica"="black", "Otras.renovables"="brown",
+                                "Generación.total"="pink","Hidroeólica"="gold"))
+View(cor(datos3[,-1]))
+```
+
+-Correlaciones Positivas Notables: Las fuentes como los motores diésel y
+las turbinas de vapor muestran fuertes correlaciones positivas con la
+generación total, indicando que son contribuyentes significativos. La
+energía hidroeólica y solar fotovoltaica también presentan relaciones
+positivas notables con la energía eólica, sugiriendo que estas fuentes
+pueden complementarse entre sí.
+
+-Correlaciones Negativas Significativas: Las turbinas de vapor muestran
+una fuerte correlación negativa con el ciclo combinado y la energía
+eólica, sugiriendo una relación inversa en sus patrones de generación.
+La energía eólica también tiene una correlación negativa significativa
+con los motores diésel, indicando comportamientos opuestos.
+
+-Generación Total: Fuentes como los motores diésel, las turbinas de
+vapor y de gas muestran una influencia positiva significativa en la
+generación total. La energía hidroeólica y la solar fotovoltaica tienen
+una influencia positiva menor pero aún relevante.
+
+```{r}
+datos4 <- read.csv("~/Proyecto 2/Cantabria_gen.csv")
+
+meses <- c()
+anios <- 2013:2023
+for (anio in anios){
+  for (mes in 1:12){
+     mes_formateado <- sprintf("%d-%02d-01", anio, mes)
+     meses <- c(meses, mes_formateado)
+  }
+}
+mes <- as.Date(meses)
+
+ggplot(data = datos4, aes(x = mes)) +
+  scale_x_date(date_labels = "%b %Y", date_breaks = "1 month") +
+  geom_line(data=datos4, aes(x=mes, y = Hidráulica, color = "Hidráulica")) +
+  geom_line(data=datos4, aes(x=mes, y = Turbinación.bombeo, color = "Turbinación.bombeo"))+
+  geom_line(data=datos4, aes(x=mes, y = Eólica, color = "Eólica")) +
+  geom_line(data=datos4, aes(x=mes, y = Solar.fotovoltaica, color = "Solar.fotovoltaica")) +
+  geom_line(data=datos4 ,aes(x=mes, y = Otras.renovables, color = "Otras.renovables")) +
+  geom_line(data=datos4 ,aes(x=mes, y = Cogeneración, color = "Cogeneración")) +             geom_line(data=datos4 ,aes(x=mes, y = Residuos.no.renovables, color = "Residuos.no.renovables")) +
+  geom_line(data=datos4 ,aes(x=mes, y = Residuos.renovables, color = "Residuos.renovables")) +
+  labs(x = "mes", y = "Valor") +
+  scale_color_manual(name = "Tipos de energía",
+                     values = c(Hidráulica = "blue", Turbinación.bombeo = "red",
+                                Eólica = "green",
+                                Solar.fotovoltaica = "purple", Otras.renovables = "orange",                                          Generación.total="yellow", Cogeneración="grey",
+                                Residuos.no.renovables="black",Residuos.renovables="gold"))
+View(cor(datos4[,-1]))
+```
+
+-Fuentes de energía hidráulica y cogeneración muestran una fuerte
+relación positiva con la generación total, indicando que son pilares
+fundamentales del mix energético.
+
+-La energía eólica también presenta una correlación positiva notable,
+aunque menor comparada con hidráulica y cogeneración.
+
+-La energía solar fotovoltaica muestra una correlación negativa
+significativa con la generación total y con otras fuentes como la
+cogeneración, lo que sugiere que su producción puede no coincidir con
+los periodos de mayor demanda.
+
+-Las fuentes de residuos, tanto renovables como no renovables, tienen
+una correlación negativa con la generación total, indicando que su
+contribución es menos predecible o menos alineada con el mix general.
+
+```{r}
+datos5 <- read.csv("~/Proyecto 2/Castilla la Mancha_gen.csv")
+
+meses <- c()
+anios <- 2013:2023
+for (anio in anios){
+  for (mes in 1:12){
+     mes_formateado <- sprintf("%d-%02d-01", anio, mes)
+     meses <- c(meses, mes_formateado)
+  }
+}
+mes <- as.Date(meses)
+
+ggplot(data = datos5, aes(x = mes)) +
+  scale_x_date(date_labels = "%b %Y", date_breaks = "1 month") +
+  geom_line(data=datos5, aes(x=mes, y = Hidráulica, color = "Hidráulica")) +
+  geom_line(data=datos5, aes(x=mes, y = Turbinación.bombeo, color = "Turbinación.bombeo"))+
+  geom_line(data=datos5, aes(x=mes, y = Nuclear, color = "Nuclear")) +
+  geom_line(data=datos5, aes(x=mes, y = Carbón, color = "Carbón")) +
+  geom_line(data=datos5 ,aes(x=mes, y = Ciclo.combinado, color = "Ciclo.combinado")) +
+  geom_line(data=datos5 ,aes(x=mes, y = Eólica, color = "Eólica")) +
+  geom_line(data=datos5 ,aes(x=mes, y = Solar.fotovoltaica, color = "Solar.fotovoltaica")) +
+  geom_line(data=datos5 ,aes(x=mes, y = Solar.térmica, color = "Solar.térmica")) +
+  geom_line(data=datos5 ,aes(x=mes, y = Otras.renovables, color = "Otras.renovables")) +
+  geom_line(data=datos5 ,aes(x=mes, y = Cogeneración, color = "Cogeneración")) +
+  labs(x = "mes", y = "Valor") +
+  scale_color_manual(name = "Tipos de energía",
+                     values = c("Hidráulica" = "blue", "Turbinación.bombeo" = "red",
+                                "Eólica" = "green",
+                                "Solar.fotovoltaica" = "purple", "Solar.térmica" = "orange",                                          "Otras.renovables"="yellow", "Cogeneración"="grey",
+                                "Generación.total"="black","Nuclear"="gold","Carbón"="brown",
+                                "Ciclo.combinado"="pink"))
+View(cor(datos5[,-1]))
+
+```
+
+-Correlaciones Positivas Notables:
+
+Eólica y Generación Total (0.701): Esta correlación es alta y positiva,
+lo que indica una fuerte asociación entre la generación eólica y la
+generación total de energía. Es probable que la energía eólica sea una
+contribuyente significativa al suministro eléctrico total.
+
+-Correlaciones Negativas Significativas:
+
+Eólica y Solar Fotovoltaica (-0.607): La correlación negativa entre la
+energía eólica y la solar fotovoltaica sugiere una relación inversa
+entre estas dos fuentes de energía. Esto puede deberse a que ambas
+dependen de condiciones climáticas diferentes (viento y luz solar), y su
+generación puede compensarse en cierta medida.
+
+Solar Fotovoltaica y Ciclo Combinado (-0.491): Esta correlación negativa
+sugiere una relación inversa entre la generación solar fotovoltaica y la
+generación de ciclo combinado. Es posible que en momentos de alta
+generación solar, la necesidad de energía del ciclo combinado disminuya.
+
+Cogeneración y Solar Térmica (-0.491): La correlación negativa entre la
+cogeneración y la energía solar térmica indica una relación inversa
+entre estas dos fuentes de energía. Esto puede ser debido a que ambas
+compiten por recursos similares o se utilizan en contextos
+industriales/comerciales específicos.
+
+-Correlación con Generación Total:
+
+Eólica y Generación Total (0.701): Esta correlación positiva indica que
+la generación eólica contribuye significativamente a la generación total
+de energía eléctrica.
+
+Solar Fotovoltaica y Generación Total (0.359): Aunque más débil que la
+correlación con la generación eólica, esta asociación positiva sugiere
+que la generación solar fotovoltaica también contribuye, aunque en menor
+medida, a la generación total de energía.
+
+```{r}
+datos6 <- read.csv("~/Proyecto 2/Castilla y León_gen.csv")
+
+meses <- c()
+anios <- 2013:2023
+for (anio in anios){
+  for (mes in 1:12){
+     mes_formateado <- sprintf("%d-%02d-01", anio, mes)
+     meses <- c(meses, mes_formateado)
+  }
+}
+mes <- as.Date(meses)
+
+ggplot(data = datos6, aes(x = mes)) +
+  scale_x_date(date_labels = "%b %Y", date_breaks = "1 month") +
+  geom_line(data=datos6, aes(x=mes, y = Hidráulica, color = "Hidráulica")) +
+  geom_line(data=datos6, aes(x=mes, y = Turbinación.bombeo, color = "Turbinación.bombeo"))+
+  geom_line(data=datos6, aes(x=mes, y = Nuclear, color = "Nuclear")) +
+  geom_line(data=datos6, aes(x=mes, y = Carbón, color = "Carbón")) +
+  geom_line(data=datos6 ,aes(x=mes, y = Eólica, color = "Eólica")) +
+  geom_line(data=datos6 ,aes(x=mes, y = Solar.fotovoltaica, color = "Solar.fotovoltaica"))+   geom_line(data=datos6 ,aes(x=mes, y = Otras.renovables, color = "Otras.renovables")) +
+  geom_line(data=datos6 ,aes(x=mes, y = Cogeneración, color = "Cogeneración")) +
+  labs(x = "mes", y = "Valor") +
+  scale_color_manual(name = "Tipos de energía",
+                     values = c("Hidráulica" = "blue", "Turbinación.bombeo" = "red",
+                                "Eólica" = "green",
+                                "Solar.fotovoltaica" = "purple",                                          "Otras.renovables"="yellow", "Cogeneración"="grey",
+                                "Generación.total"="black","Nuclear"="gold","Carbón"="brown"))
+View(cor(datos6[,-1]))
+
+```
+
+-Correlaciones Positivas Notables:
+
+Hidráulica y Generación Total (0.654): Existe una correlación positiva
+notable entre la generación hidráulica y la generación total de energía.
+Esto sugiere que la generación hidráulica contribuye significativamente
+a la generación total de energía eléctrica.
+
+-Correlaciones Negativas Significativas:
+
+Nuclear y Solar Fotovoltaica (-0.435): Esta correlación negativa
+significativa indica una relación inversa entre la generación nuclear y
+la generación solar fotovoltaica. Es probable que en momentos de alta
+generación solar fotovoltaica, la necesidad de energía nuclear
+disminuya, y viceversa.
+
+Nuclear y Otras Renovables (-0.640): Hay una correlación negativa
+significativa entre la generación nuclear y otras fuentes renovables de
+energía. Esto sugiere que la generación nuclear y otras fuentes
+renovables pueden competir o tener impactos inversos en la generación de
+energía.
+
+Solar Fotovoltaica y Otras Renovables (0.624): La correlación positiva
+significativa entre la generación solar fotovoltaica y otras fuentes
+renovables indica una posible asociación entre estas fuentes de energía.
+Es probable que el aumento en la generación solar fotovoltaica esté
+relacionado con el aumento en la generación de otras fuentes renovables.
+
+-Correlación con Generación Total:
+
+Hidráulica y Generación Total (0.654): Esta correlación positiva sugiere
+que la generación hidráulica contribuye significativamente a la
+generación total de energía eléctrica.
+
+Eólica y Generación Total (0.508): Aunque menos notable que la
+correlación de la generación hidráulica, esta asociación positiva
+sugiere que la generación eólica también contribuye, aunque en menor
+medida, a la generación total de energía.
+
+```{r}
+datos7 <- read.csv("~/Proyecto 2/Cataluña_gen.csv")
+
+meses <- c()
+anios <- 2013:2023
+for (anio in anios){
+  for (mes in 1:12){
+     mes_formateado <- sprintf("%d-%02d-01", anio, mes)
+     meses <- c(meses, mes_formateado)
+  }
+}
+mes <- as.Date(meses)
+
+ggplot(data = datos7, aes(x = mes)) +
+  scale_x_date(date_labels = "%b %Y", date_breaks = "1 month") +
+  geom_line(data=datos7, aes(x=mes, y = Hidráulica, color = "Hidráulica")) +
+  geom_line(data=datos7, aes(x=mes, y = Turbinación.bombeo, color = "Turbinación.bombeo"))+
+  geom_line(data=datos7, aes(x=mes, y = Nuclear, color = "Nuclear")) +
+  geom_line(data=datos7, aes(x=mes, y = Ciclo.combinado, color = "Ciclo.combinado")) +
+  geom_line(data=datos7 ,aes(x=mes, y = Eólica, color = "Eólica")) +
+  geom_line(data=datos7 ,aes(x=mes, y = Solar.fotovoltaica, color = "Solar.fotovoltaica"))+   geom_line(data=datos7 ,aes(x=mes, y = Otras.renovables, color = "Otras.renovables")) +
+  geom_line(data=datos7 ,aes(x=mes, y = Cogeneración, color = "Cogeneración")) +
+  geom_line(data=datos7 ,aes(x=mes, y = Fuel...Gas, color = "Fuel...Gas")) +
+  geom_line(data=datos7 ,aes(x=mes, y = Solar.térmica, color = "Solar.térmica")) +
+  geom_line(data=datos7 ,aes(x=mes, y = Residuos.no.renovables, color = "Residuos.no.renovables")) +
+  geom_line(data=datos7 ,aes(x=mes, y = Residuos.renovables, color = "Residuos.renovables")) +
+  labs(x = "mes", y = "Valor") +
+  scale_color_manual(name = "Tipos de energía",
+                     values = c("Hidráulica" = "blue", "Turbinación.bombeo" = "red",
+                                "Eólica" = "green",
+                                "Solar.fotovoltaica" = "purple",                                          "Otras.renovables"="yellow", "Cogeneración"="grey",
+                                "Generación.total"="black","Nuclear"="gold","Ciclo.combinado"="brown","Fuel...Gas"="pink","Solar.térmica"="turquoise","Residuos.no.renovables"="maroon","Residuos.renovables"="magenta"))
+View(cor(datos7[,-1]))
+```
+
+-Correlaciones Positivas Notables:
+
+Hidráulica y Solar Fotovoltaica (0.461): Existe una correlación positiva
+notable entre la generación hidráulica y la generación solar
+fotovoltaica. Esto sugiere que la generación hidroeléctrica y la solar
+fotovoltaica pueden complementarse, quizás beneficiándose mutuamente en
+ciertas condiciones climáticas o de disponibilidad de recursos.
+
+Eólica y Solar Fotovoltaica (0.620): Hay una correlación positiva
+notable entre la generación eólica y la generación solar fotovoltaica.
+Esto podría indicar que estas dos fuentes de energía renovable son
+complementarias y pueden contribuir de manera conjunta a la generación
+de energía en momentos en los que una de las dos fuentes sea más
+productiva.
+
+Solar Fotovoltaica y Solar Térmica (0.620): Existe una correlación
+positiva notable entre la generación solar fotovoltaica y la generación
+solar térmica. Esto podría deberse a la dependencia de ambas tecnologías
+de la radiación solar, lo que las hace más efectivas en condiciones
+climáticas similares.
+
+-Correlaciones Negativas Significativas:
+
+Hidráulica y Ciclo Combinado (-0.318): Se observa una correlación
+negativa significativa entre la generación hidráulica y la generación en
+ciclo combinado. Esto podría indicar que en ciertas circunstancias, la
+generación hidroeléctrica y la generación en ciclo combinado compiten
+entre sí o se ven afectadas inversamente por factores como la
+disponibilidad de agua o la demanda eléctrica.
+
+Eólica y Solar Térmica (-0.323): Se presenta una correlación negativa
+significativa entre la generación eólica y la generación solar térmica.
+Esto podría indicar que estas dos fuentes de energía pueden competir en
+algunos aspectos, quizás debido a las diferencias en la disponibilidad y
+la previsibilidad de los recursos.
+
+-Correlación con Generación Total:
+
+Nuclear y Generación Total (0.744): Se observa una correlación positiva
+significativa entre la generación nuclear y la generación total de
+energía eléctrica. Esto sugiere que la generación nuclear contribuye de
+manera significativa a la generación total de energía.
+
+Eólica y Generación Total (0.297): Aunque menos pronunciada que la
+correlación con la generación nuclear, también se observa una
+correlación positiva entre la generación eólica y la generación total de
+energía. Esto indica que la energía eólica también contribuye a la
+generación total, aunque en menor medida que la energía nuclear.
+
+```{r}
+datos8 <- read.csv("~/Proyecto 2/ceuta_gen.csv")
+
+meses <- c()
+anios <- 2013:2023
+for (anio in anios){
+  for (mes in 1:12){
+     mes_formateado <- sprintf("%d-%02d-01", anio, mes)
+     meses <- c(meses, mes_formateado)
+  }
+}
+mes <- as.Date(meses)
+
+ggplot(data = datos8, aes(x = mes)) +
+  scale_x_date(date_labels = "%b %Y", date_breaks = "1 month") +
+  geom_line(data=datos8, aes(x=mes, y = Motores.diésel, color = "Motores.diésel")) +
+  geom_line(data=datos8, aes(x=mes, y = Turbina.de.gas, color = "Turbina.de.gas"))+
+  labs(x = "mes", y = "Valor") +
+  scale_color_manual(name = "Tipos de energía",
+                     values = c("Motores.diésel" = "blue", "Turbina.de.gas"= "red",
+                                "Generación.total" = "green"))
+View(cor(datos8[,-1]))
+```
+
+En este conjunto de datos, parece haber una fuerte correlación positiva
+entre la generación total y la generación de motores diésel (0.999) y
+también entre la generación total y la generación de turbinas de gas
+(0.999). Esto sugiere que tanto los motores diésel como las turbinas de
+gas contribuyen significativamente a la generación total de energía.
+
+Sin embargo, también hay una correlación negativa moderada pero notable
+entre la generación de motores diésel y la generación de turbinas de gas
+(-0.134). Esto podría indicar una relación de competencia o compensación
+entre estas dos fuentes de generación de energía, donde un aumento en la
+generación de una fuente podría estar asociado con una disminución en la
+generación de la otra.
+
+Es importante tener en cuenta que estas correlaciones pueden ser
+influenciadas por una variedad de factores, como la disponibilidad de
+combustible, la demanda eléctrica y las condiciones operativas de las
+instalaciones de generación.
+
+```{r}
+datos9 <- read.csv("~/Proyecto 2/Comunidad de Madrid_gen.csv")
+
+meses <- c()
+anios <- 2013:2023
+for (anio in anios){
+  for (mes in 1:12){
+     mes_formateado <- sprintf("%d-%02d-01", anio, mes)
+     meses <- c(meses, mes_formateado)
+  }
+}
+mes <- as.Date(meses)
+
+ggplot(data = datos9, aes(x = mes)) +
+  scale_x_date(date_labels = "%b %Y", date_breaks = "1 month") +
+  geom_line(data=datos9, aes(x=mes, y = Hidráulica, color = "Hidráulica")) +
+  geom_line(data=datos9, aes(x=mes, y = Cogeneración, color = "Cogeneración"))+
+  geom_line(data=datos9, aes(x=mes, y = Residuos.no.renovables, color = "Residuos.no.renovables")) +
+  geom_line(data=datos9, aes(x=mes, y = Residuos.renovables, color = "Residuos.renovables")) +
+  geom_line(data=datos9 ,aes(x=mes, y = Solar.fotovoltaica, color = "Solar.fotovoltaica"))+   geom_line(data=datos9 ,aes(x=mes, y = Otras.renovables, color = "Otras.renovables")) +
+  labs(x = "mes", y = "Valor") +
+  scale_color_manual(name = "Tipos de energía",
+                     values = c("Hidráulica" = "blue", "Cogeneración" = "red",
+                                "Residuos.no.renovables" = "green",
+                                "Solar.fotovoltaica" = "purple",                                          "Otras.renovables"="yellow", "Residuos.renovables"="grey",
+                                "Generación.total"="black"))
+View(cor(datos9[,-1]))
+```
+
+-Correlaciones positivas: Hay una correlación positiva notable entre la
+generación total y la generación hidroeléctrica (0.501).
+
+También hay una correlación significativa entre la generación total y la
+generación de otras renovables (0.560) y la cogeneración (0.915).
+
+-Correlaciones negativas: Existe una correlación negativa notable entre
+la generación total y la generación de residuos no renovables (-0.322) y
+residuos renovables (-0.322).
+
+Además, la generación total muestra una correlación negativa con la
+generación de energía solar fotovoltaica (-0.081), aunque esta
+correlación es relativamente débil.
+
+Estas correlaciones sugieren que la generación hidroeléctrica, la
+generación de otras renovables y la cogeneración tienen una influencia
+positiva significativa en la generación total de energía, mientras que
+la generación de residuos no renovables y renovables tiene una
+influencia negativa. La generación de energía solar fotovoltaica parece
+tener una correlación menos significativa con la generación total en
+este conjunto de datos.
+
+```{r}
+datos10 <- read.csv("~/Proyecto 2/Comunidad de Melilla_gen.csv")
+
+meses <- c()
+anios <- 2013:2023
+for (anio in anios){
+  for (mes in 1:12){
+     mes_formateado <- sprintf("%d-%02d-01", anio, mes)
+     meses <- c(meses, mes_formateado)
+  }
+}
+mes <- as.Date(meses)
+
+ggplot(data = datos10, aes(x = mes)) +
+  scale_x_date(date_labels = "%b %Y", date_breaks = "1 month") +
+  geom_line(data=datos10, aes(x=mes, y = Motores.diésel, color = "Motores.diésel")) +
+  geom_line(data=datos10, aes(x=mes, y = Turbina.de.gas, color = "Turbina.de.gas"))+
+  geom_line(data=datos10, aes(x=mes, y = Solar.fotovoltaica, color = "Solar.fotovoltaica")) +
+  geom_line(data=datos10, aes(x=mes, y = Residuos.no.renovables, color = "Residuos.no.renovables")) +
+  geom_line(data=datos10,aes(x=mes, y = Residuos.renovables, color = "Residuos.renovables")) +
+  labs(x = "mes", y = "Valor") +
+  scale_color_manual(name = "Tipos de energía",
+                     values = c("Motores.diésel" = "blue", "Turbina.de.gas" = "red",
+                                "Solar.fotovoltaica" = "green",
+                                "Residuos.no.renovables" = "purple",                                          "Residuos.renovables"="yellow", "Generación.total"="grey"))
+View(cor(datos10[,-1]))
+```
+
+-Correlaciones positivas notables: La generación total muestra una
+correlación positiva notable con los motores diésel (0.992) y una
+correlación relativamente fuerte con la generación de energía solar
+fotovoltaica (0.268).
+
+-Correlaciones débiles: Existe una correlación débil entre la generación
+total y la turbina de gas (0.068).
+
+-Correlaciones negativas: No hay correlaciones negativas significativas
+en este conjunto de datos.
+
+Estas correlaciones sugieren que la generación total está fuertemente
+influenciada por la generación de energía a través de motores diésel y,
+en menor medida, por la generación de energía solar fotovoltaica. La
+correlación con la turbina de gas es débil, lo que sugiere que la
+generación total no está tan influenciada por esta fuente de energía en
+particular en este conjunto de datos.
+
+```{r}
+datos11 <- read.csv("~/Proyecto 2/Comunidad de Navarra_gen.csv")
+
+meses <- c()
+anios <- 2013:2023
+for (anio in anios){
+  for (mes in 1:12){
+     mes_formateado <- sprintf("%d-%02d-01", anio, mes)
+     meses <- c(meses, mes_formateado)
+  }
+}
+mes <- as.Date(meses)
+
+ggplot(data = datos7, aes(x = mes)) +
+  scale_x_date(date_labels = "%b %Y", date_breaks = "1 month") +
+  geom_line(data=datos7, aes(x=mes, y = Hidráulica, color = "Hidráulica")) +
+  geom_line(data=datos7, aes(x=mes, y = Cogeneración, color = "Cogeneración"))+
+  geom_line(data=datos7, aes(x=mes, y = Ciclo.combinado, color = "Ciclo.combinado")) +
+  geom_line(data=datos7 ,aes(x=mes, y = Eólica, color = "Eólica")) +
+  geom_line(data=datos7 ,aes(x=mes, y = Solar.fotovoltaica, color = "Solar.fotovoltaica"))+   geom_line(data=datos7 ,aes(x=mes, y = Otras.renovables, color = "Otras.renovables")) +
+  labs(x = "mes", y = "Valor") +
+  scale_color_manual(name = "Tipos de energía",
+                     values = c("Hidráulica" = "blue", "Cogeneración" = "red",
+                                "Generación.total" = "green",
+                                "Solar.fotovoltaica" = "purple",                                          "Otras.renovables"="yellow", "Ciclo.combinado"="grey",
+                                "Eólica"="black"))
+View(cor(datos11[,-1]))
+```
+
+-Correlaciones positivas notables: La generación total muestra una
+correlación positiva notable con el ciclo combinado (0.905) y una
+correlación moderada con la generación de energía eólica (0.506).
+
+-Correlaciones débiles: Existe una correlación débil entre la generación
+total y la generación de energía hidráulica (-0.195), así como con la
+generación de energía solar fotovoltaica (0.012) y con la generación de
+energía a través de otras fuentes renovables (0.076).
+
+-Correlaciones negativas: La generación total muestra una correlación
+negativa con la generación de energía a través de la hidráulica
+(-0.195), lo que indica una relación inversa débil entre estas dos
+variables.
+
+Estas correlaciones sugieren que la generación total está fuertemente
+influenciada por la generación de energía a través del ciclo combinado,
+seguida por la generación de energía eólica. Sin embargo, la generación
+de energía hidráulica muestra una correlación negativa débil con la
+generación total, lo que sugiere una relación inversa leve entre estas
+dos variables. La correlación con la generación de energía solar
+fotovoltaica y otras fuentes renovables es débil, lo que indica una
+influencia menos significativa de estas fuentes en la generación total.
+
+```{r}
+datos12 <- read.csv("~/Proyecto 2/Comunidad Valenciana_gen.csv")
+
+meses <- c()
+anios <- 2013:2023
+for (anio in anios){
+  for (mes in 1:12){
+     mes_formateado <- sprintf("%d-%02d-01", anio, mes)
+     meses <- c(meses, mes_formateado)
+  }
+}
+mes <- as.Date(meses)
+
+ggplot(data = datos12, aes(x = mes)) +
+  scale_x_date(date_labels = "%b %Y", date_breaks = "1 month") +
+  geom_line(data=datos12, aes(x=mes, y = Hidráulica, color = "Hidráulica")) +
+  geom_line(data=datos12, aes(x=mes, y = Turbinación.bombeo, color = "Turbinación.bombeo"))+
+  geom_line(data=datos12, aes(x=mes, y = Nuclear, color = "Nuclear")) +
+  geom_line(data=datos12, aes(x=mes, y = Ciclo.combinado, color = "Ciclo.combinado")) +
+  geom_line(data=datos12 ,aes(x=mes, y = Eólica, color = "Eólica")) +
+  geom_line(data=datos12 ,aes(x=mes, y = Solar.fotovoltaica, color = "Solar.fotovoltaica"))+   geom_line(data=datos7 ,aes(x=mes, y = Otras.renovables, color = "Otras.renovables")) +
+  geom_line(data=datos12 ,aes(x=mes, y = Cogeneración, color = "Cogeneración")) +
+  geom_line(data=datos12 ,aes(x=mes, y = Fuel...Gas, color = "Fuel...Gas")) +
+  geom_line(data=datos12 ,aes(x=mes, y = Solar.térmica, color = "Solar.térmica")) +
+  geom_line(data=datos12 ,aes(x=mes, y = Residuos.no.renovables, color = "Residuos.no.renovables")) +
+  labs(x = "mes", y = "Valor") +
+  scale_color_manual(name = "Tipos de energía",
+                     values = c("Hidráulica" = "blue", "Turbinación.bombeo" = "red",
+                                "Eólica" = "green",
+                                "Solar.fotovoltaica" = "purple",                                          "Otras.renovables"="yellow", "Cogeneración"="grey",
+                                "Generación.total"="black","Nuclear"="gold","Ciclo.combinado"="brown","Fuel...Gas"="pink","Solar.térmica"="turquoise","Residuos.no.renovables"="maroon"))
+View(cor(datos12[,-1]))
+```
+
+-Correlaciones positivas notables: Generación total muestra una
+correlación positiva notable con la generación de energía nuclear
+(0.797), así como con la generación de energía solar fotovoltaica
+(0.795) y solar térmica (0.505).
+
+-Correlaciones negativas notables: Generación total exhibe una
+correlación negativa notable con la generación de energía eólica
+(-0.463).
+
+-Correlaciones moderadas: La generación total muestra una correlación
+moderada con la generación de energía hidráulica (0.357).
+
+Estas correlaciones sugieren que la generación total de energía está
+fuertemente influenciada por la generación de energía nuclear y solar,
+mientras que tiene una relación inversa considerable con la generación
+de energía eólica. La correlación moderada con la generación de energía
+hidráulica indica una influencia significativa pero menos marcada en
+comparación con las fuentes de energía nuclear y solar.
+
+```{r}
+datos13 <- read.csv("~/Proyecto 2/Extremadura_gen.csv")
+
+meses <- c()
+anios <- 2013:2023
+for (anio in anios){
+  for (mes in 1:12){
+     mes_formateado <- sprintf("%d-%02d-01", anio, mes)
+     meses <- c(meses, mes_formateado)
+  }
+}
+mes <- as.Date(meses)
+
+ggplot(data = datos7, aes(x = mes)) +
+  scale_x_date(date_labels = "%b %Y", date_breaks = "1 month") +
+  geom_line(data=datos7, aes(x=mes, y = Hidráulica, color = "Hidráulica")) +
+  geom_line(data=datos7, aes(x=mes, y = Turbinación.bombeo, color = "Turbinación.bombeo"))+
+  geom_line(data=datos7, aes(x=mes, y = Nuclear, color = "Nuclear")) +
+  geom_line(data=datos7 ,aes(x=mes, y = Eólica, color = "Eólica")) +
+  geom_line(data=datos7 ,aes(x=mes, y = Solar.fotovoltaica, color = "Solar.fotovoltaica"))+   geom_line(data=datos7 ,aes(x=mes, y = Otras.renovables, color = "Otras.renovables")) +
+  geom_line(data=datos7 ,aes(x=mes, y = Cogeneración, color = "Cogeneración")) +
+  geom_line(data=datos7 ,aes(x=mes, y = Solar.térmica, color = "Solar.térmica")) +
+  labs(x = "mes", y = "Valor") +
+  scale_color_manual(name = "Tipos de energía",
+                     values = c("Hidráulica" = "blue", "Turbinación.bombeo" = "red",
+                                "Eólica" = "green",
+                                "Solar.fotovoltaica" = "purple",                                          "Otras.renovables"="yellow", "Cogeneración"="grey",
+                                "Generación.total"="black","Nuclear"="gold","Solar.térmica"="turquoise"))
+View(cor(datos13[,-1]))
+```
+
+-Correlaciones positivas notables: La generación total tiene una
+correlación positiva notable con la generación de energía nuclear
+(0.656), solar fotovoltaica (0.678) y solar térmica (0.464).
+
+Además, hay una correlación positiva notable entre la generación de
+energía solar fotovoltaica y la solar térmica (0.240).
+
+-Correlaciones negativas notables: Hay una correlación negativa notable
+entre la generación de energía eólica y la generación de energía
+hidráulica (-0.180).
+
+Estas correlaciones sugieren que la generación total de energía está
+fuertemente influenciada por la generación de energía nuclear y solar,
+con una contribución significativa tanto de la energía solar
+fotovoltaica como de la solar térmica. Además, la correlación negativa
+entre la generación de energía eólica y la hidráulica indica una
+relación inversa entre estas dos fuentes de energía renovable
+
+```{r}
+datos14 <- read.csv("~/Proyecto 2/Galicia_gen.csv")
+
+meses <- c()
+anios <- 2013:2023
+for (anio in anios){
+  for (mes in 1:12){
+     mes_formateado <- sprintf("%d-%02d-01", anio, mes)
+     meses <- c(meses, mes_formateado)
+  }
+}
+mes <- as.Date(meses)
+
+ggplot(data = datos14, aes(x = mes)) +
+  scale_x_date(date_labels = "%b %Y", date_breaks = "1 month") +
+  geom_line(data=datos14, aes(x=mes, y = Hidráulica, color = "Hidráulica")) +
+  geom_line(data=datos14, aes(x=mes, y = Turbinación.bombeo, color = "Turbinación.bombeo"))+
+  geom_line(data=datos14, aes(x=mes, y = Carbón, color = "Carbón")) +
+  geom_line(data=datos14, aes(x=mes, y = Ciclo.combinado, color = "Ciclo.combinado")) +
+  geom_line(data=datos14 ,aes(x=mes, y = Eólica, color = "Eólica")) +
+  geom_line(data=datos14 ,aes(x=mes, y = Solar.fotovoltaica, color ="Solar.fotovoltaica"))+
+  geom_line(data=datos7 ,aes(x=mes, y = Otras.renovables, color = "Otras.renovables")) +
+  geom_line(data=datos14,aes(x=mes, y = Cogeneración, color = "Cogeneración")) +
+  geom_line(data=datos14,aes(x=mes, y = Residuos.no.renovables, color = "Residuos.no.renovables")) +
+  geom_line(data=datos14,aes(x=mes, y = Residuos.renovables, color = "Residuos.renovables")) +
+  labs(x = "mes", y = "Valor") +
+  scale_color_manual(name = "Tipos de energía",
+                     values = c("Hidráulica" = "blue", "Turbinación.bombeo" = "red",
+                                "Eólica" = "green",
+                                "Solar.fotovoltaica" = "purple",                                          "Otras.renovables"="yellow", "Cogeneración"="grey",
+                                "Generación.total"="black","Carbón"="gold","Ciclo.combinado"="brown","Fuel...Gas"="pink","Solar.térmica"="turquoise","Residuos.no.renovables"="maroon","Residuos.renovables"="magenta"))
+View(cor(datos14[,-1]))
+```
+
+-Correlaciones positivas notables: La generación total de energía tiene
+una correlación positiva notable con la generación de energía hidráulica
+(0.764), eólica (0.616) y solar fotovoltaica (0.616).
+
+También hay una correlación positiva entre la generación de energía
+eólica y la generación de energía hidráulica (0.565).
+
+La generación de energía nuclear tiene una correlación positiva moderada
+con la generación total de energía (0.344).
+
+-Correlaciones negativas notables: Existe una correlación negativa
+notable entre la generación de energía solar fotovoltaica y la
+generación de energía hidráulica (-0.562), así como entre la generación
+de energía solar fotovoltaica y la generación total de energía (-0.726).
+
+La generación de energía nuclear muestra una correlación negativa
+moderada con la generación de energía carbón (-0.620).
+
+Estas correlaciones sugieren que la generación total de energía está
+influenciada significativamente por múltiples fuentes, incluidas la
+energía hidráulica, eólica y solar. Además, hay una fuerte correlación
+negativa entre la generación de energía solar fotovoltaica y otras
+fuentes de energía, como la hidráulica y la generación total de energía.
+
+```{r}
+datos15 <- read.csv("~/Proyecto 2/La Rioja_gen.csv")
+
+meses <- c()
+anios <- 2013:2023
+for (anio in anios){
+  for (mes in 1:12){
+     mes_formateado <- sprintf("%d-%02d-01", anio, mes)
+     meses <- c(meses, mes_formateado)
+  }
+}
+mes <- as.Date(meses)
+
+ggplot(data = datos15, aes(x = mes)) +
+  scale_x_date(date_labels = "%b %Y", date_breaks = "1 month") +
+  geom_line(data=datos15, aes(x=mes, y = Hidráulica, color = "Hidráulica")) +
+  geom_line(data=datos15, aes(x=mes, y = Ciclo.combinado, color = "Ciclo.combinado")) +
+  geom_line(data=datos15 ,aes(x=mes, y = Eólica, color = "Eólica")) +
+  geom_line(data=datos15 ,aes(x=mes, y = Solar.fotovoltaica, color ="Solar.fotovoltaica"))+
+  geom_line(data=datos15 ,aes(x=mes, y = Otras.renovables, color = "Otras.renovables")) +
+  geom_line(data=datos15 ,aes(x=mes, y = Cogeneración, color = "Cogeneración")) +
+  labs(x = "mes", y = "Valor") +
+  scale_color_manual(name = "Tipos de energía",
+                     values = c("Hidráulica" = "blue", "Turbinación.bombeo" = "red",
+                                "Eólica" = "green",
+                                "Solar.fotovoltaica" = "purple",                                          "Otras.renovables"="yellow", "Cogeneración"="grey",
+                                "Generación.total"="black","Nuclear"="gold","Ciclo.combinado"="brown","Fuel...Gas"="pink","Solar.térmica"="turquoise","Residuos.no.renovables"="maroon","Residuos.renovables"="magenta"))
+View(cor(datos15[,-1]))
+```
+
+-Correlaciones positivas notables: La generación total de energía tiene
+una correlación positiva notable con la generación de energía ciclo
+combinado (0.874) y la generación de energía eólica (0.291).
+
+-Correlaciones negativas notables: La generación de energía hidráulica
+muestra una correlación negativa notable con la generación de energía
+ciclo combinado (-0.456).
+
+La generación de energía solar fotovoltaica presenta una correlación
+negativa notable con la generación de energía eólica (-0.523) y la
+generación de energía hidráulica (-0.243).
+
+Estas correlaciones sugieren que la generación total de energía está
+influenciada significativamente por la generación de energía ciclo
+combinado y eólica. Además, existe una relación inversa entre la
+generación de energía hidráulica y la generación de energía ciclo
+combinado, así como entre la generación de energía solar fotovoltaica y
+otras fuentes de energía, como la eólica y la hidráulica.
+
+```{r}
+datos16 <- read.csv("~/Proyecto 2/País Vasco_gen.csv")
+
+meses <- c()
+anios <- 2013:2023
+for (anio in anios){
+  for (mes in 1:12){
+     mes_formateado <- sprintf("%d-%02d-01", anio, mes)
+     meses <- c(meses, mes_formateado)
+  }
+}
+mes <- as.Date(meses)
+
+ggplot(data = datos7, aes(x = mes)) +
+  scale_x_date(date_labels = "%b %Y", date_breaks = "1 month") +
+  geom_line(data=datos7, aes(x=mes, y = Hidráulica, color = "Hidráulica")) +
+  geom_line(data=datos7, aes(x=mes, y = Ciclo.combinado, color = "Ciclo.combinado")) +
+  geom_line(data=datos7 ,aes(x=mes, y = Eólica, color = "Eólica")) +
+  geom_line(data=datos7 ,aes(x=mes, y = Solar.fotovoltaica, color = "Solar.fotovoltaica"))+   geom_line(data=datos7 ,aes(x=mes, y = Otras.renovables, color = "Otras.renovables")) +
+  geom_line(data=datos7 ,aes(x=mes, y = Cogeneración, color = "Cogeneración")) +
+  geom_line(data=datos7 ,aes(x=mes, y = Residuos.no.renovables, color = "Residuos.no.renovables")) +
+  geom_line(data=datos7 ,aes(x=mes, y = Residuos.renovables, color = "Residuos.renovables")) +
+  labs(x = "mes", y = "Valor") +
+  scale_color_manual(name = "Tipos de energía",
+                     values = c("Hidráulica" = "blue", "Turbinación.bombeo" = "red",
+                                "Eólica" = "green",
+                                "Solar.fotovoltaica" = "purple",                                          "Otras.renovables"="yellow", "Cogeneración"="grey",
+                                "Generación.total"="black","Nuclear"="gold","Ciclo.combinado"="brown","Fuel...Gas"="pink","Solar.térmica"="turquoise","Residuos.no.renovables"="maroon","Residuos.renovables"="magenta"))
+View(cor(datos16[,-1]))
+```
+
+-Correlaciones positivas notables: La generación total de energía tiene
+una correlación muy alta con la generación de energía ciclo combinado
+(0.945), lo que sugiere una fuerte relación entre ambas.
+
+La generación de energía eólica tiene una correlación significativa con
+la generación de energía hidráulica (0.427), lo que indica una
+asociación positiva entre estas fuentes de energía renovable.
+
+Hay una correlación notable entre la generación de energía cogenerada y
+la generación de energía de residuos no renovables (0.181), lo que
+sugiere una posible relación en la producción de energía entre estas dos
+fuentes.
+
+-Correlaciones negativas notables: Existe una correlación negativa
+notable entre la generación de energía solar fotovoltaica y la
+generación de energía hidráulica (-0.432), lo que sugiere una relación
+inversa entre estas dos fuentes de energía.
+
+La generación de energía residencial renovable muestra una correlación
+negativa con la generación de energía ciclo combinado (-0.106), lo que
+podría indicar una relación inversa entre estas dos fuentes de energía.
+
+Estas correlaciones proporcionan información sobre cómo diferentes
+fuentes de energía pueden estar relacionadas entre sí en términos de su
+producción total.
+
+```{r}
+datos17 <- read.csv("~/Proyecto 2/Principado de Asturias_gen.csv")
+
+meses <- c()
+anios <- 2013:2023
+for (anio in anios){
+  for (mes in 1:12){
+     mes_formateado <- sprintf("%d-%02d-01", anio, mes)
+     meses <- c(meses, mes_formateado)
+  }
+}
+mes <- as.Date(meses)
+
+ggplot(data = datos17, aes(x = mes)) +
+  scale_x_date(date_labels = "%b %Y", date_breaks = "1 month") +
+  geom_line(data=datos17, aes(x=mes, y = Hidráulica, color = "Hidráulica")) +
+  geom_line(data=datos17, aes(x=mes, y = Turbinación.bombeo, color = "Turbinación.bombeo"))+
+  geom_line(data=datos17, aes(x=mes, y = Carbón, color = "Carbón")) +
+  geom_line(data=datos17, aes(x=mes, y = Ciclo.combinado, color = "Ciclo.combinado")) +
+  geom_line(data=datos17 ,aes(x=mes, y = Eólica, color = "Eólica")) +
+  geom_line(data=datos17 ,aes(x=mes, y = Solar.fotovoltaica, color = "Solar.fotovoltaica"))+   
+  geom_line(data=datos17 ,aes(x=mes, y = Otras.renovables, color = "Otras.renovables")) +
+  geom_line(data=datos17 ,aes(x=mes, y = Cogeneración, color = "Cogeneración")) +
+  geom_line(data=datos17 ,aes(x=mes, y = Residuos.no.renovables, color = "Residuos.no.renovables")) +
+  labs(x = "mes", y = "Valor") +
+  scale_color_manual(name = "Tipos de energía",
+                     values = c("Hidráulica" = "blue", "Turbinación.bombeo" = "red",
+                                "Eólica" = "green",
+                                "Solar.fotovoltaica" = "purple",                                          "Otras.renovables"="yellow", "Cogeneración"="grey",
+                                "Generación.total"="black","Carbón"="gold","Ciclo.combinado"="brown","Fuel...Gas"="pink","Solar.térmica"="turquoise","Residuos.no.renovables"="maroon","Residuos.renovables"="magenta"))
+View(cor(datos17[,-1]))
+```
+
+-Correlaciones positivas notables:
+
+La generación total de energía tiene una correlación muy alta con la
+generación de energía de carbón (0.876), lo que sugiere una fuerte
+relación entre ambas.
+
+La generación de energía de carbón también tiene una correlación
+positiva con la generación de energía de ciclo combinado (0.459).
+
+La generación de energía de eólica muestra una correlación notable con
+la generación de energía hidráulica (0.468), lo que sugiere una
+asociación positiva entre estas dos fuentes de energía.
+
+-Correlaciones negativas notables: La generación de energía de eólica
+tiene una correlación negativa con la generación de energía de residuos
+no renovables (-0.160), lo que podría indicar una relación inversa entre
+estas dos fuentes de energía.
+
+La generación de energía de residuos no renovables muestra una
+correlación negativa con la generación de energía de turbinación y
+bombeo (-0.515), lo que sugiere una posible relación inversa entre estas
+dos fuentes de energía.
+
+Estas correlaciones proporcionan información útil sobre cómo diferentes
+fuentes de energía pueden estar relacionadas entre sí en términos de su
+producción total.
+
+```{r}
+datos18 <- read.csv("~/Proyecto 2/Región de Murcia_gen.csv")
+
+meses <- c()
+anios <- 2013:2023
+for (anio in anios){
+  for (mes in 1:12){
+     mes_formateado <- sprintf("%d-%02d-01", anio, mes)
+     meses <- c(meses, mes_formateado)
+  }
+}
+mes <- as.Date(meses)
+
+ggplot(data = datos18, aes(x = mes)) +
+  scale_x_date(date_labels = "%b %Y", date_breaks = "1 month") +
+  geom_line(data=datos18, aes(x=mes, y = Hidráulica, color = "Hidráulica")) +
+  geom_line(data=datos18, aes(x=mes, y = Ciclo.combinado, color = "Ciclo.combinado")) +
+  geom_line(data=datos18 ,aes(x=mes, y = Eólica, color = "Eólica")) +
+  geom_line(data=datos18 ,aes(x=mes, y = Solar.fotovoltaica, color = "Solar.fotovoltaica"))+   
+  geom_line(data=datos18 ,aes(x=mes, y = Otras.renovables, color = "Otras.renovables")) +
+  geom_line(data=datos18 ,aes(x=mes, y = Cogeneración, color = "Cogeneración")) +
+  geom_line(data=datos18 ,aes(x=mes, y = Solar.térmica, color = "Solar.térmica")) +
+  labs(x = "mes", y = "Valor") +
+  scale_color_manual(name = "Tipos de energía",
+                     values = c("Hidráulica" = "blue", "Turbinación.bombeo" = "red",
+                                "Eólica" = "green",
+                                "Solar.fotovoltaica" = "purple",                                          "Otras.renovables"="yellow", "Cogeneración"="grey",
+                                "Generación.total"="black","Nuclear"="gold","Ciclo.combinado"="brown","Fuel...Gas"="pink","Solar.térmica"="turquoise","Residuos.no.renovables"="maroon","Residuos.renovables"="magenta"))
+View(cor(datos18[,-1]))
+
+```
+
+-Correlaciones positivas notables: La generación total de energía tiene
+una fuerte correlación positiva con la generación de energía solar
+térmica (0.697) y la generación de energía solar fotovoltaica (0.697),
+lo que sugiere una asociación positiva entre estas fuentes de energía y
+la generación total.
+
+La generación de energía solar fotovoltaica también muestra una
+correlación positiva con la generación de energía ciclo combinado
+(0.600), lo que indica una relación positiva entre estas dos fuentes de
+energía.
+
+-Correlaciones negativas notables: La generación de energía eólica tiene
+una correlación negativa con la generación de energía hidráulica
+(-0.437) y la generación de energía solar térmica (-0.591), lo que
+sugiere una posible relación inversa entre estas fuentes de energía.
+
+La generación de energía ciclo combinado también muestra una correlación
+negativa con la generación de energía hidráulica (-0.037), lo que podría
+indicar una relación inversa entre estas dos fuentes de energía.
+
+Estas correlaciones ofrecen información valiosa sobre cómo diferentes
+fuentes de energía pueden estar relacionadas entre sí en términos de su
+producción total.
+
+```{r}
+datos1 <- datos1[, -1]
+```
+
+```{r}
+aragon <- list()
+for (fuente in colnames(datos1)){
+  aragon[[fuente]]<- sum(as.numeric(datos1[[fuente]]))
+}
+print(aragon)
+```
+
+```{r}
+datos<- datos[, -1]
+```
+
+```{r}
+andalucía <- list()
+for (fuente in colnames(datos)){
+  andalucía[[fuente]]<- sum(as.numeric(datos[[fuente]]))
+}
+print(andalucía)
+```
+```{r}
+datos2<- datos2[, -1]
+```
+
+```{r}
+baleares <- list()
+for (fuente in colnames(datos2)){
+  baleares[[fuente]]<- sum(as.numeric(datos2[[fuente]]))
+}
+print(baleares)
+```
+```{r}
+datos3<- datos3[, -1]
+```
+
+```{r}
+canarias <- list()
+for (fuente in colnames(datos3)){
+  canarias[[fuente]]<- sum(as.numeric(datos3[[fuente]]))
+}
+print(canarias)
+```
+```{r}
+datos4<- datos4[, -1]
+```
+
+```{r}
+cantabria <- list()
+for (fuente in colnames(datos4)){
+  cantabria[[fuente]]<- sum(as.numeric(datos4[[fuente]]))
+}
+print(cantabria)
+```
+```{r}
+datos5<- datos5[, -1]
+```
+
+```{r}
+castilla_la_mancha <- list()
+for (fuente in colnames(datos5)){
+  castilla_la_mancha[[fuente]]<- sum(as.numeric(datos5[[fuente]]))
+}
+print(castilla_la_mancha)
+```
+```{r}
+datos6<- datos6[, -1]
+```
+
+```{r}
+castilla_y_leon <- list()
+for (fuente in colnames(datos6)){
+  castilla_y_leon[[fuente]]<- sum(as.numeric(datos6[[fuente]]))
+}
+print(castilla_y_leon)
+```
+```{r}
+datos7<- datos7[, -1]
+```
+
+```{r}
+cataluña <- list()
+for (fuente in colnames(datos7)){
+  cataluña[[fuente]]<- sum(as.numeric(datos7[[fuente]]))
+}
+print(cataluña)
+```
+```{r}
+datos8<- datos8[, -1]
+```
+
+```{r}
+ceuta <- list()
+for (fuente in colnames(datos8)){
+  ceuta[[fuente]]<- sum(as.numeric(datos8[[fuente]]))
+}
+print(ceuta)
+```
+```{r}
+datos9<- datos9[, -1]
+```
+
+```{r}
+comunidad_de_madrid <- list()
+for (fuente in colnames(datos9)){
+  comunidad_de_madrid[[fuente]]<- sum(as.numeric(datos9[[fuente]]))
+}
+print(comunidad_de_madrid)
+```
+```{r}
+datos10<- datos10[, -1]
+```
+
+```{r}
+melilla <- list()
+for (fuente in colnames(datos10)){
+  melilla[[fuente]]<- sum(as.numeric(datos10[[fuente]]))
+}
+print(melilla)
+```
+```{r}
+datos11<- datos11[, -1]
+```
+
+```{r}
+navarra <- list()
+for (fuente in colnames(datos11)){
+  navarra[[fuente]]<- sum(as.numeric(datos11[[fuente]]))
+}
+print(navarra)
+```
+```{r}
+datos12<- datos12[, -1]
+```
+
+```{r}
+comunidad_valenciana <- list()
+for (fuente in colnames(datos12)){
+  comunidad_valenciana[[fuente]]<- sum(as.numeric(datos12[[fuente]]))
+}
+print(comunidad_valenciana)
+```
+```{r}
+datos13<- datos13[, -1]
+```
+
+```{r}
+extremadura <- list()
+for (fuente in colnames(datos13)){
+  extremadura[[fuente]]<- sum(as.numeric(datos13[[fuente]]))
+}
+print(extremadura)
+```
+```{r}
+datos14<- datos14[, -1]
+```
+
+```{r}
+galicia <- list()
+for (fuente in colnames(datos14)){
+  galicia[[fuente]]<- sum(as.numeric(datos14[[fuente]]))
+}
+print(galicia)
+```
+```{r}
+datos15<- datos15[, -1]
+```
+
+```{r}
+la_rioja <- list()
+for (fuente in colnames(datos15)){
+  la_rioja[[fuente]]<- sum(as.numeric(datos15[[fuente]]))
+}
+print(la_rioja)
+```
+```{r}
+datos16<- datos16[, -1]
+```
+
+```{r}
+pais_basco <- list()
+for (fuente in colnames(datos16)){
+  pais_basco[[fuente]]<- sum(as.numeric(datos16[[fuente]]))
+}
+print(pais_basco)
+```
+```{r}
+datos17<- datos17[, -1]
+```
+
+```{r}
+asturias <- list()
+for (fuente in colnames(datos17)){
+  asturias[[fuente]]<- sum(as.numeric(datos17[[fuente]]))
+}
+print(asturias)
+```
+```{r}
+datos18<- datos18[, -1]
+```
+
+```{r}
+murcia <- list()
+for (fuente in colnames(datos18)){
+  murcia[[fuente]]<- sum(as.numeric(datos18[[fuente]]))
+}
+print(murcia
+      )
+```
+
+```{r}
+library(shiny)
+library(ggplot2)
+library(sf)
+library(plotly)
+
+# Obtener geometrías de las comunidades autónomas
+ccaa <- esp_get_ccaa()
+
+# Obtener la caja para Canarias
+can_box <- esp_get_can_box()
+
+# Datos de producción de energía para Murcia (ejemplo)
+murcia_data <- list(
+  Hidráulica = 1058053,
+  Ciclo.combinado = 44511165,
+  Eólica = 5078758,
+  Solar.fotovoltaica = 14072803,
+  Solar.térmica = 432999.1,
+  Otras.renovables = 468096.7,
+  Cogeneración = 17222882
+)
+
+# Datos de producción de energía para Asturias (ejemplo)
+asturias_data <- list(
+  Hidráulica = 18358355,
+  Turbinación.bombeo = 324492.5,
+  Carbón = 73408469,
+  Ciclo.combinado = 16295496,
+  Eólica = 12688997,
+  Solar.fotovoltaica = 6470.933,
+  Otras.renovables = 3358904,
+  Cogeneración = 3623685,
+  Residuos.no.renovables = 6558184
+)
+
+# Datos de producción de energía para el País Vasco (ejemplo)
+pais_vasco_data <- list(
+  Hidráulica = 4195644,
+  Ciclo.combinado = 33766921,
+  Eólica = 3577634,
+  Solar.fotovoltaica = 452341.9,
+  Otras.renovables = 457787.5,
+  Cogeneración = 20056052,
+  Residuos.no.renovables = 5139609,
+  Residuos.renovables = 3021312
+)
+
+# Datos de producción de energía para La Rioja (ejemplo)
+la_rioja_data <- list(
+  Hidráulica = 1522664,
+  Ciclo.combinado = 9928717,
+  Eólica = 10058342,
+  Solar.fotovoltaica = 1514306,
+  Otras.renovables = 91786.14,
+  Cogeneración = 836573.2
+)
+
+#Datos de produccion de energía para Galicia
+galicia_data<-list(
+  Hidráulica = 82266031,
+  Turbinación.bombeo = 654819.8,
+  Carbón = 66307442,
+  Ciclo.combinado = 23374808,
+  Eólica = 95828896,
+  Solar.fotovoltaica = 229097.1,
+  Otras.renovables = 3525062,
+  Cogeneración = 24973929,
+  Residuos.no.renovables = 1890180,
+  Residuos.renovables = 1890173
+)
+
+#Datos de produccion de energía para Extremadura
+extremadura_data<-list(
+  Hidráulica = 21718383,
+  Turbinación.bombeo = 311033.6,
+  Nuclear = 172515537,
+  Solar.fotovoltaica = 31138214,
+  Solar.térmica = 20338672,
+  Otras.renovables = 2496214,
+  Cogeneración = 565807.9,
+  Eólica = 561288.2
+)
+
+#Datos de produccion de energía para Comunidad Valenciana
+comunidad_valenciana_data<-list(
+  Hidráulica = 5165655,
+  Turbinación.bombeo = 14130946,
+  Nuclear = 90770750,
+  Fuel...Gas = 54.043,
+  Ciclo.combinado = 45775168,
+  Eólica = 25428583,
+  Solar.fotovoltaica = 6009921,
+  Solar.térmica = 881200.1,
+  Otras.renovables = 405078.3,
+  Cogeneración = 16320609,
+  Residuos.no.renovables = 1721420
+)
+
+#Datos de produccion de energía para Navarra
+navarra_data<-list(
+  Hidráulica =5727976,
+  Ciclo.combinado= 20447884,
+  Eólica= 28817521,
+  Solar.fotovoltaica= 3279793,
+  Otras.renovables= 3277799,
+  Cogeneración= 9189006
+)
+
+#Datos de produccion de energía para Melilla
+melilla_data<-list(
+  Motores.diésel= 2171491,
+  Turbina.de.gas= 2223.362,
+  Solar.fotovoltaica= 844.116,
+  Residuos.no.renovables= 56270.42,
+  Residuos.renovables= 56270.42
+)
+
+#Datos de produccion de energía para Madrid
+madrid_data<-list(
+  Hidráulica= 1476689,
+  Solar.fotovoltaica= 1025458,
+  Otras.renovables= 1880950,
+  Cogeneración= 7897114,
+  Residuos.no.renovables= 710460.1,
+  Residuos.renovables= 710460.1
+)
+
+#Datos de produccion de energía para Ceuta
+ceuta_data<- list(
+  Motores.diésel= 2220426,
+  Turbina.de.gas= 2765.305
+)
+
+#Datos de produccion de energía para Cataluña
+cataluña_data<-list(
+  Hidráulica= 44910573,
+  Turbinación.bombeo= 2245466,
+  Nuclear= 255844931,
+  Fuel...Gas= 2869.642,
+  Ciclo.combinado= 71989461,
+  Eólica= 30662097,
+  Solar.fotovoltaica= 4433060,
+  Solar.térmica= 759091.6,
+  Otras.renovables= 1989799,
+  Cogeneración= 52346478,
+  Residuos.no.renovables= 1387123,
+  Residuos.renovables= 1338401
+)
+
+#Datos de produccion de energía para Castilla y Leon
+castilla_y_leon_data<-list(
+  Hidráulica= 83756013,
+  Turbinación.bombeo= 4637600,
+  Nuclear= 92114.73,
+  Carbón= 39697297,
+  Eólica= 135253263,
+  Solar.fotovoltaica= 13116963,
+  Otras.renovables= 3826317
+)
+#Datos de produccion de energía para Castilla la Mancha
+castilla_la_mancha_data<-list(
+  Hidráulica= 7804824,
+  Turbinación.bombeo= 573692,
+  Nuclear= 85207258,
+  Carbón= 2542953,
+  Ciclo.combinado= 15037888,
+  Eólica= 88259421,
+  Solar.fotovoltaica= 33355923,
+  Solar.térmica= 7285831,
+  Otras.renovables= 3598039,
+  Cogeneración= 10645224
+)
+
+#Datos de produccion de energía para Cantabria
+cantabria_data<-list(
+  Hidráulica= 2623143,
+  Turbinación.bombeo= 4898293,
+  Eólica= 788145.8,
+  Solar.fotovoltaica= 27873.79,
+  Otras.renovables= 867649.5,
+  Cogeneración= 10559443,
+  Residuos.no.renovables= 339596.6,
+  Residuos.renovables= 339596.6
+)
+
+#Datos de produccion de energía para Canarias
+canarias_data<- list(
+  Hidráulica= 36968.56,
+  Motores.diésel= 22021077,
+  Turbina.de.gas= 3072549,
+  Turbina.de.vapor= 21533045,
+  Ciclo.combinado= 35594271,
+  Eólica= 8815067,
+  Solar.fotovoltaica= 3127088,
+  Otras.renovables= 96103.55,
+  Hidroeólica= 177122
+)
+
+#Datos de produccion de energía para Baleares
+baleares_data<- list(
+  Carbón= 16101620,
+  Motores.diésel= 6426890,
+  Turbina.de.gas= 5117984,
+  Ciclo.combinado= 17174182,
+  Eólica= 44194.07,
+  Solar.fotovoltaica= 1806036,
+  Otras.renovables= 14719.77,
+  Cogeneración= 364641.2,
+  Residuos.no.renovables= 1449279,
+  Residuos.renovables= 1449279
+)
+
+#Datos de produccion de energía para Andalucía
+andalucia_data <- list(
+  Hidráulica= 7027668,
+  Turbinación.bombeo= 2613363,
+  Carbón= 66307061,
+  Ciclo.combinado= 89714095,
+  Eólica= 74124831,
+  Solar.fotovoltaica= 33802621,
+  Solar.térmica= 22859284,
+  Otras.renovables= 16331840,
+  Cogeneración= 52574989,
+  Residuos.no.renovables= 631441.6
+
+)
+
+#Datos de produccion de energía para Aragón
+aragon_data <- list(
+  Hidráulica= 34143176,
+  Turbinación.bombeo= 2606339,
+  Carbón= 24856942,
+  Ciclo.combinado= 11885623,
+  Eólica= 72501538,
+  Solar.fotovoltaica= 12290062,
+  Otras.renovables= 559238.5,
+  Cogeneración= 28626314,
+  Residuos.no.renovables= 3525544
+)
+
+# Determinar la fuente de energía predominante en Murcia, Asturias, País Vasco y La Rioja
+energia_predominante_murcia <- names(murcia_data)[which.max(unlist(murcia_data))]
+energia_predominante_asturias <- names(asturias_data)[which.max(unlist(asturias_data))]
+energia_predominante_pais_vasco <- names(pais_vasco_data)[which.max(unlist(pais_vasco_data))]
+energia_predominante_la_rioja <- names(la_rioja_data)[which.max(unlist(la_rioja_data))]
+energia_predominante_galicia <- names(galicia_data)[which.max(unlist(galicia_data))]
+energia_predominante_extremadura <- names(extremadura_data)[which.max(unlist(extremadura_data))]
+energia_predominante_comunidad_valenciana <- names(comunidad_valenciana_data)[which.max(unlist(comunidad_valenciana_data))]
+energia_predominante_navarra <- names(navarra_data)[which.max(unlist(navarra_data))]
+energia_predominante_melilla <- names(melilla_data)[which.max(unlist(melilla_data))]
+energia_predominante_madrid <- names(madrid_data)[which.max(unlist(madrid_data))]
+energia_predominante_ceuta <- names(ceuta_data)[which.max(unlist(ceuta_data))]
+energia_predominante_cataluña <- names(cataluña_data)[which.max(unlist(cataluña_data))]
+energia_predominante_castilla_y_leon <- names(castilla_y_leon_data)[which.max(unlist(castilla_y_leon_data))]
+energia_predominante_castilla_la_mancha <- names(castilla_la_mancha_data)[which.max(unlist(castilla_la_mancha_data))]
+energia_predominante_cantabria <- names(cantabria_data)[which.max(unlist(cantabria_data))]
+energia_predominante_canarias <- names(canarias_data)[which.max(unlist(canarias_data))]
+energia_predominante_baleares <- 
+names(baleares_data)[which.max(unlist(baleares_data))]
+energia_predominante_andalucia <- names(andalucia_data)[which.max(unlist(andalucia_data))]
+energia_predominante_aragon <- names(aragon_data)[which.max(unlist(aragon_data))]
+
+
+# Asignar colores a las fuentes de energía
+colores <- c("Cogeneración" = "blue", "Ciclo.combinado" = "green", "Eólica" = "yellow",
+             "Nuclear" = "orange", "Motores.diésel" = "purple",
+             "Carbón" = "brown")
+
+# Crear la aplicación Shiny
+ui <- fluidPage(
+  titlePanel("Mapa de España"),
+  mainPanel(
+    # Agregar el gráfico del mapa y la leyenda
+    plotlyOutput("map_plot"),
+    br(),
+    br(),
+    htmlOutput("legend")
+  )
+)
+
+server <- function(input, output, session) {
+  output$map_plot <- renderPlotly({
+    # Asignar color a las comunidades autónomas
+    ccaa$color[ccaa$ine.ccaa.name == "Murcia, Región de"] <- colores[energia_predominante_murcia]
+    ccaa$color[ccaa$ine.ccaa.name == "Asturias, Principado de"] <- colores[energia_predominante_asturias]
+    ccaa$color[ccaa$ine.ccaa.name == "País Vasco"] <- colores[energia_predominante_pais_vasco]
+    ccaa$color[ccaa$ine.ccaa.name == "Rioja, La"] <- colores[energia_predominante_la_rioja]
+    ccaa$color[ccaa$ine.ccaa.name == "Galicia"] <-
+colores[energia_predominante_galicia]
+    ccaa$color[ccaa$ine.ccaa.name == "Extremadura"]<-
+colores[energia_predominante_extremadura]
+    ccaa$color[ccaa$ine.ccaa.name == "Comunitat Valenciana"] <-
+colores[energia_predominante_comunidad_valenciana]
+    ccaa$color[ccaa$ine.ccaa.name == "Navarra, Comunidad Foral de"]<-
+colores[energia_predominante_navarra]
+    ccaa$color[ccaa$ine.ccaa.name == "Melilla"] <-
+colores[energia_predominante_melilla]
+    ccaa$color[ccaa$ine.ccaa.name == "Madrid, Comunidad de"] <-
+colores[energia_predominante_madrid]
+    ccaa$color[ccaa$ine.ccaa.name == "Ceuta"] <-
+colores[energia_predominante_ceuta]
+    ccaa$color[ccaa$ine.ccaa.name == "Cataluña"]<-
+colores[energia_predominante_cataluña]
+    ccaa$color[ccaa$ine.ccaa.name == "Castilla y León"] <-
+colores[energia_predominante_castilla_y_leon]
+    ccaa$color[ccaa$ine.ccaa.name == "Castilla - La Mancha"]<-
+colores[energia_predominante_castilla_la_mancha]
+    ccaa$color[ccaa$ine.ccaa.name == "Cantabria"] <-
+colores[energia_predominante_cantabria]
+    ccaa$color[ccaa$ine.ccaa.name == "Canarias"] <- 
+colores[energia_predominante_canarias]
+    ccaa$color[ccaa$ine.ccaa.name == "Balears, Illes"] <-
+colores[energia_predominante_baleares]
+    ccaa$color[ccaa$ine.ccaa.name == "Andalucía"] <-
+colores[energia_predominante_andalucia]
+    ccaa$color[ccaa$ine.ccaa.name == "Aragón"] <-
+colores[energia_predominante_aragon]
+    
+    # Crear el gráfico
+    p <- ggplot(ccaa) +
+      geom_sf(aes(fill = color)) +
+      geom_sf_text(aes(label = ifelse(ine.ccaa.name %in% c("Murcia, Región de", "Asturias, Principado de", "País Vasco", "Rioja, La","Galicia","Extremadura","Comunitat Valenciana","Navarra, Comunidad Foral de","Melilla","Madrid, Comunidad de","Ceuta","Cataluña","Castilla y León","Castilla - La Mancha","Cantabria","Canarias","Balears, Illes","Andalucía","Aragón"), ine.ccaa.name, "")), size = 2, color = "black") +
+      geom_sf(data = can_box, inherit.aes = FALSE) +
+      scale_fill_identity() +  # Usar colores definidos en el dataset
+      theme_void() +
+      labs(fill = "Energía Predominante")
+    
+    # Convertir a plotly
+    ggplotly(p) %>%
+      layout(legend = list(orientation = "h"))  # Mostrar la leyenda horizontalmente
+  })
+  
+  output$legend <- renderText({
+    # Generar la leyenda de colores
+    legend_html <- '<div style="border:1px solid grey;padding:5px;border-radius:3px;background-color:white;">'
+    for (energia in names(colores)) {
+      color <- colores[energia]
+      legend_html <- paste0(legend_html, '<div style="display:flex;align-items:center;">',
+                            '<div style="width:20px;height:20px;background-color:', color, ';margin-right:5px;"></div>',
+                            '<div>', energia, '</div></div>')
+    }
+    legend_html <- paste0(legend_html, '</div>')
+    HTML(legend_html)
+  })
+}
+
+shinyApp(ui = ui, server = server)
+```

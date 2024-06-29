@@ -1,0 +1,293 @@
+---
+title: "Junta_datos"
+author: "Víctor Máñez"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r Librerías necesarias, include=FALSE}
+library(mapSpain)
+library(tidyverse)
+library(ggplot2)
+library(readxl)
+library(shiny)
+library(leaflet)
+library(plotly)
+library(sf)
+library(data.table)
+library(tibble)
+library(tidyr)
+library(dplyr)
+library(VIM)
+```
+
+```{r Ocupados Industria}
+#Preparamos los datos de ocupados en el sector industrial (incluye sector servicios, es decir turismo) 
+
+#Leemos el archivo de datos
+datos = read.csv("DATOS OBJ 3/ocupados_industria_provincia.csv")
+#Sacamos el total nacional de la primera fila
+total_nacional = datos[1,]
+#Eliminamos la fila de Total Nacional para el estudio por CCAA
+datos = datos[-1,]
+#Reseteamos los índices de fila
+rownames(datos) = NULL
+
+#Cambiamos el nombre de la columna de provincias
+datos = datos %>% rename(Provincia = X)
+#Quitamos los números que aparecen al lado de la provincia (recortamos) para que nuestros análisis sean más limpios
+datos$Provincia = gsub("\\d+", "", datos$Provincia)
+
+#Creamos un vector que asocie a cada Provincia su CCAA correspondiente
+comunidades_autonomas = c("Castilla - La Mancha", "Comunitat Valenciana", "Andalucía", "País Vasco", "Asturias, Principado de", "Castilla y León", "Extremadura", "Balears, Illes", "Cataluña", "País Vasco", "Castilla y León", "Extremadura", "Andalucía", "Cantabria", "Comunitat Valenciana", "Castilla - La Mancha", "Andalucía", "Galicia", "Castilla - La Mancha", "País Vasco", "Cataluña", "Andalucía", "Castilla - La Mancha", "Andalucía", "Andalucía", "Castilla y León", "Castilla y León", "Cataluña", "Galicia", "Madrid, Comunidad de", "Andalucía", "Murcia, Región de", "Navarra, Comunidad Foral de", "Galicia", "Castilla y León", "Canarias", "Galicia", "Rioja, La", "Castilla y León", "Canarias", "Castilla y León", "Andalucía", "Castilla y León", "Cataluña", "Aragón", "Castilla - La Mancha", "Comunitat Valenciana", "Castilla y León", "Castilla y León", "Aragón", "Ceuta", "Melilla")
+#La añadimos como 2a columna, para comprobar
+datos = cbind(Provincia = datos[, 1], CCAA = comunidades_autonomas, datos[, -1])
+
+#Después de comprobar que cada provincia corresponde a la CCAA que le toca, eliminamos esa columna para hacer los análisis
+datos = datos[, -1]
+
+tipos_de_datos = sapply(datos, class)
+#Como las columnas de los trimestres están en formato character, cambiamos la coma decimal por un punto para que así lo pueda reconocer R como un valor real
+datos[, 2:ncol(datos)] = lapply(datos[, 2:ncol(datos)], function(x) gsub(",", ".", x))
+
+# Cogemos las columnas de los trimestres que son las que nos interesa cambiar el tipo
+columnas_a_convertir = names(datos)[2:ncol(datos)]
+
+# Convertimos las columnas a numéricas
+datos[columnas_a_convertir] = lapply(datos[columnas_a_convertir], as.numeric)
+
+#Agrupamos ahora todas las provincias en CCAA con la función aggregate, lo haremos con la media de los valores de cada provincia dentro de la CCAA
+datos_agrupado = aggregate(. ~ CCAA, data = datos, FUN = function(x) round(mean(x), 2))
+
+#Trasponemos nuestros datos para poder hacer que cada columna se refiera a las CCAA
+datos_transpuesto = as.data.frame(t(datos_agrupado))
+
+#Usamos la primera fila como el encabezado de nuestro DF, que son precisamente las CCAA
+colnames(datos_transpuesto) = datos_transpuesto[1,]
+
+#Eliminamos la fila con los nombres de las CCAA para que no nos moleste en los análisis que hagamos
+datos_transpuesto = datos_transpuesto[-1, ]
+
+#Convertimos las variables a naturaleza cuantitativa
+empleo_industria = mutate_all(datos_transpuesto, as.numeric)
+
+variable_merge = rownames(empleo_industria)
+
+empleo_industria = cbind(X = variable_merge, empleo_industria)
+
+# Añadimos a todas las comunidades autónomas del dataframe (excepto la primera) _Eind para saber qué tipo de indicador económico estamos tratando
+nombres_columnas = names(empleo_industria)[-1]
+nombres_columnas_con_sufijo = paste(nombres_columnas, "_EInd", sep = "")
+
+# Asignamos los nuevos nombres al dataframe
+names(empleo_industria)[-1] = nombres_columnas_con_sufijo
+head(empleo_industria)
+```
+
+```{r IPI}
+datos_ipi = read.csv("DATOS OBJ 3/ipi_tirmestre.csv")
+#Añadimos a Ceuta y Melilla como columnas para tener en todos los datasets el mismo número de variables
+datos_ipi$Ceuta = NA
+datos_ipi$Melilla = NA
+nombres = c(
+    "X",
+    "Andalucía",
+    "Aragón",
+    "Asturias, Principado de",
+    "Balears, Illes",
+    "Canarias",
+    "Cantabria",
+    "Castilla y León",
+    "Castilla - La Mancha",
+    "Cataluña",
+    "Comunitat Valenciana",
+    "Extremadura",
+    "Galicia",
+    "Madrid, Comunidad de",
+    "Murcia, Región de",
+    "Navarra, Comunidad Foral de",
+    "País Vasco",
+    "Rioja, La",
+    "Ceuta",
+    "Melilla"
+)
+#Arreglamos los nombres de las columnas del dataframe de IPI, con la función to_csv de pandas se han fastidiado las comas de los nombres de las CCAA :(
+colnames(datos_ipi) = nombres
+#Comprobamos que el indicador de empleo_industria tiene además los datos de Ceuta y Melilla, no como el de IPI
+#setdiff(colnames(empleo_industria), colnames(datos_ipi))
+
+nombres_columnas = names(datos_ipi)[-1]
+nombres_columnas_con_sufijo = paste(nombres_columnas, "_IPI", sep = "")
+
+# Asignar los nuevos nombres a las columnas del DataFrame
+names(datos_ipi)[-1] = nombres_columnas_con_sufijo
+```
+
+```{r Junta Datos}
+datos_economicos = merge(empleo_industria, datos_ipi, by = "X", suffixes = c("", ""))
+datos_economicos
+```
+```{r Desempleo_industria}
+#El desempleo industrial tiene una estructura muy parecida al df de empleo industrial
+#empleo_industria = read.csv("DATOS OBJ 3/desempleo_industria_CCAA.csv")
+#Sacamos el total nacional de la primera fila
+#total_nacional = desempleo_industria[1,]
+
+#Eliminamos la fila de Total Nacional para el estudio por CCAA
+#desempleo_industria = desempleo_industria[-1,]
+
+#Reseteamos los índices de fila
+#rownames(desempleo_industria) = NULL
+
+#desempleo_industria = desempleo_industria %>% rename(Provincia = X)
+
+
+#Trasponemos nuestros datos para poder hacer que cada columna se refiera a las CCAA
+#desempleo_industria = as.data.frame(t(desempleo_industria))
+
+#Usamos la primera fila como el encabezado de nuestro DF, que son precisamente las CCAA
+#colnames(desempleo_industria) = desempleo_industria[1,]
+#Eliminamos la fila con los nombres de las CCAA para que no nos moleste en los análisis que hagamos
+#desempleo_industria = desempleo_industria[-1, ]
+
+#desempleo_industria[, 1:ncol(desempleo_industria)] = lapply(desempleo_industria[, 1:ncol(desempleo_industria)], function(x) gsub(",", ".", x))
+
+#Convertimos las variables a naturaleza cuantitativa
+#desempleo_industria = mutate_all(desempleo_industria, as.numeric)
+
+#names(desempleo_industria) = paste(nombres[-1], "_DInd", sep = "")
+
+#variable_merge = rownames(desempleo_industria)
+
+#desempleo_industria$X = variable_merge
+```
+
+```{r Junta Datos2}
+#datos_economicos = merge(datos_economicos, desempleo_industria, by = "X", suffixes = c("", ""))
+```
+
+
+```{r Datos_PIB}
+#Leemos el fichero .xlsx donde tenemos los datos del PIB absoluto por Comunidad Autónoma
+pib = read_excel("DATOS OBJ 3/datos_originales.xlsx")
+
+#Leemos el fichero de población
+poblacion = read.csv("DATOS OBJ 3/pobl_ccaa.csv")
+
+#Quitamos la primera fila de los índices (no nos interesa)
+pib = pib[,-1]
+
+#Les ponemos los mismos nombres al df de población, después de comprobar que las variables están en el mismo orden
+colnames(poblacion) = colnames(pib)
+
+#Como nos faltan los datos del año 2023 para el fichero de PIB los imputaremos utilizando el algoritmo del vecino más cercano
+nueva_fila = c(rep(NA, ncol(pib) - 1))
+pib = rbind(pib, c(2023, nueva_fila))
+pib = kNN(pib, k = 1)
+
+#Eliminamos las filas que crea la función KNN del paquete VIM
+pib = pib[,1:20]
+
+# Ordenamos los datos por año para que tenga el mismo formato
+pib = arrange(pib, X)
+poblacion = arrange(poblacion, X)
+
+#Obtenemos ahora los valores de PIB per cápita dividiendo el valor de nuestros datos por la población de cada CCAA en cada año
+pib_capita = round(pib[,2:20]/poblacion[,2:20],2)
+
+#Añadimos otra vez la columna del año para poder concatenarla luego con los datos económicos
+pib_capita = cbind(X = poblacion$X, pib_capita)
+```
+
+```{r PIB per cápita}
+#En el objeto columnas_a_convertir tenemos cada uno de los trimestres que tienen nuestros datos, usaremos estos datos para acceder a cada año y poner un valor del pib per cápita en cada trimestre.
+columnas_a_convertir = sort(columnas_a_convertir)
+#Creamos un vector que contenga solo los años para acceder a las filas de pib_capita
+X = substr(columnas_a_convertir, 2, 5)
+
+datos_pib_per_capita = data.frame()
+# Iterar sobre cada elemento en el vector X
+for (elemento in X) {
+  # Acceder a la fila en pib_capita donde X coincide con el elemento actual
+  fila = pib_capita[pib_capita$X == elemento, ]
+  # Agregar la fila al dataframe datos_pib_per_capita
+  datos_pib_per_capita = rbind(datos_pib_per_capita, fila[,2:20])
+}
+# Añadimos a todas las comunidades autónomas del dataframe (excepto la primera) _PIB para saber qué tipo de indicador económico estamos tratando
+nombres_columnas = names(datos_pib_per_capita)
+nombres_columnas_con_sufijo = paste(nombres_columnas, "_PIB", sep = "")
+# Asignamos los nuevos nombres al dataframe
+names(datos_pib_per_capita) = nombres_columnas_con_sufijo
+
+#Asignamos los trimestres a la columna X
+datos_pib_per_capita = cbind(X = columnas_a_convertir, datos_pib_per_capita)
+datos_pib_per_capita
+```
+```{r Junta Datos3}
+datos_economicos = merge(datos_economicos, datos_pib_per_capita, by = "X", suffixes = c("", ""))
+```
+
+```{r Generación vs Demanda}
+#Cargamos el fichero de genvsdem que hemos creado con pandas
+genvsdem <- read.csv("DATOS OBJ 3/genvsdem_total.csv", row.names = NULL)
+#Eliminamos la primera columna que no interesa, pues se refiere a el número de veces que ha hecho la media
+genvsdem = genvsdem[,-1]
+
+#Nos creamos un vector con los nombres de las columnas originales del archivo de Pandas, para que no se alteren los nombres, esto pasa porque al llevar algunas CCAA una coma en su nombre nos lo lee de forma un poco "rara"
+columnas = c('Andalucía_Generación', 'Andalucía_Demanda', 'Aragón_Generación',
+       'Aragón_Demanda', 'Asturias, Principado de_Generación',
+       'Asturias, Principado de_Demanda', 'Balears, Illes_Generación',
+       'Balears, Illes_Demanda', 'Canarias_Generación', 'Canarias_Demanda',
+       'Cantabria_Generación', 'Cantabria_Demanda',
+       'Castilla - La Mancha_Generación', 'Castilla - La Mancha_Demanda',
+       'Castilla y León_Generación', 'Castilla y León_Demanda',
+       'Cataluña_Generación', 'Cataluña_Demanda',
+       'Comunitat Valenciana_Generación', 'Comunitat Valenciana_Demanda',
+       'Extremadura_Generación', 'Extremadura_Demanda', 'Galicia_Generación',
+       'Galicia_Demanda', 'Madrid, Comunidad de_Generación',
+       'Madrid, Comunidad de_Demanda', 'Murcia, Región de_Generación',
+       'Murcia, Región de_Demanda', 'Navarra, Comunidad Foral de_Generación',
+       'Navarra, Comunidad Foral de_Demanda', 'País Vasco_Generación',
+       'País Vasco_Demanda', 'Rioja, La_Generación', 'Rioja, La_Demanda')
+#Asignamos los nombres del vector a las columnas de nuestro DF referidas a las CCAA
+colnames(genvsdem)[1:length(columnas)+1] <- columnas
+#Como vemos redondea un poquito los datos...
+head(genvsdem)
+```
+```{r Diferencia}
+#Sacamos los nombres de las CCAA, excepto la columna que indica el tiempo "X"
+ccaa_nombres = unique(gsub("_Generación|_Demanda", "", colnames(genvsdem)[-1]))
+ccaa_nombres
+# Para cada una de ellas vamos calculando la diferencia entre la generación y la demanda
+for (ccaa in ccaa_nombres) {
+  generacion_col = paste0(ccaa, "_Generación")
+  demanda_col = paste0(ccaa, "_Demanda")
+  diferencia_col = paste0(ccaa, "_Diferencia")
+  print(generacion_col)
+  print(demanda_col)
+  print(diferencia_col)
+  if (generacion_col %in% colnames(genvsdem) && demanda_col %in% colnames(genvsdem)) {
+    genvsdem[[diferencia_col]] = genvsdem[[generacion_col]] - genvsdem[[demanda_col]]
+  }
+}
+```
+
+```{r Junta Datos4}
+datos_economicos = merge(datos_economicos, genvsdem, by = "X", all.x = TRUE, suffixes = c("", ""))
+datos_economicos$Melilla_PIB = NA
+```
+```{r Arregla Datos}
+#file = "DATOS OBJ 3/MAPA"
+# Guardar el DataFrame en un archivo CSV con separadores de ;
+# Trasponemos antes el dataframe para que nos sea más sencillo
+datos_arreglados = t(datos_economicos)
+colnames(datos_arreglados) = datos_arreglados["X",]
+datos_arreglados = datos_arreglados[-1,]
+nombres_filas = rownames(datos_arreglados)
+datos_arreglados <- apply(datos_arreglados, 2, as.numeric)
+datos_arreglados <- cbind(X = nombres_filas, datos_arreglados)
+#write.csv(datos_arreglados, file = "datos_mapast.csv", row.names = FALSE, sep = ";", fileEncoding = "UTF-8")
+```
+
+
+

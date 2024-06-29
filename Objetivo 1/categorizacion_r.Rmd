@@ -1,0 +1,1006 @@
+---
+title: "Categorización"
+author: "Álvaro Prado Expósito"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    runmode: shiny
+    toc: true              
+    toc_depth: 5            
+    toc_float: 
+      collapsed: false        
+      smooth_scroll: true
+runtime: shiny
+---
+
+# Introducción
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+library(readxl)
+library(ggplot2)
+library(dplyr)
+library(networkD3)
+library(shiny)
+library(htmltools)
+```
+
+**Objetivo 1: Categorización de los países de la Unión Europea según su balance energético**
+
+Para el desarrollo de este objetivo hemos programado una aplicación mediante la librería networkD3 de R que visualiza el balance energético mediante un diagrama de Sankey. De este modo podemos visualizar fácilmente el flujo energético dentro de cada país. La meta de este objetivo es categorizar correctamente cada país según la distribución de su balance energético y la evolución del mismo.
+En primer lugar, vamos a categorizar al conjunto de la Unión Europea para posteriormente realizar este análisis sobre cada estado miembro.
+
+```{r, echo=FALSE}
+europa="DATOS OBJ 1/europa.xlsx"
+hojas=excel_sheets(europa)
+
+hojas=setdiff(hojas, c("Contents", "footnotes and sources", "energy flows-energy balances", "energy products-energy balances"))
+
+
+ui <- fluidPage(
+  tags$head(
+    tags$style(HTML("
+      /* Ajustar el tamaño de fuente para los selectores de entrada */
+      .selectize-input {
+        font-size: 12px; /* Cambiar el tamaño según sea necesario */
+      }
+    "))
+  ),
+  
+  
+  selectInput("year", "Selecciona un año:",
+              choices = as.character(seq(1990, 2020)),
+              selected = "2020"),
+  
+  selectInput("country", "Selecciona un país:",
+              choices = hojas,
+              selected = "ES"),
+  
+  verbatimTextOutput("resultados"),
+  
+  htmlOutput("html_output")
+)
+
+server <- function(input, output) {
+  
+  balance <- reactive({
+    pais <- input$country
+    año <- input$year
+    
+    excel=read_excel(europa, sheet=pais)
+    
+    excel=excel[-c(255:545), ]
+    excel=excel[-c(1:10), ]
+    excel=excel[, -c(1,2)]
+    colnames(excel)=c("Balance", c(1990:2020))
+    excel$`1990` <- as.numeric(excel$`1990`)
+    
+    excel <- excel[-c(1:85), ]
+    excel <- excel[-c(26:95), ]
+    excel <- excel[-c(29:37), ]
+    excel <- excel[-27, ]
+    excel <- excel[-c(29,31,33), ]
+    excel <- excel[-c(32:51), ]
+    
+
+    excel <- excel[-c(3,4), ]
+    excel <- excel[-c(11:20), ]
+    excel <- excel[-7, ]
+    
+    excel[, c(2:32)]=lapply(excel[, c(2:32)], as.numeric)
+    
+    convertir_a_positivo <- function(fila) {
+      return(ifelse(fila < 0, -1 * fila, fila))
+    }
+    
+    excel[, c(2:32)]=lapply(excel[, c(2:32)], convertir_a_positivo)
+    
+    excel <- excel[, colSums(is.na(excel)) != nrow(excel)]
+    
+    agrupar <- excel[c(3,4,10,11,12), ]
+    
+    suma <- agrupar %>%
+      summarise(across(where(is.numeric), sum))
+    
+    otros <- c("Others", as.numeric(suma))
+    
+    excel <- excel[-c(3,4,10,11,12),]
+    
+    excel <- rbind(excel, otros)
+    
+    excel <- excel[-38, ]
+    
+    excel <- excel[-3, ]
+    
+    excel <- excel[-c(14:26),]
+    excel <- excel[-c(15:20),]
+    
+    
+    pre_sankey <- data.frame(Balance = excel$Balance, 'Valor' = excel[, año])
+  
+    rownames(pre_sankey) <- pre_sankey$Balance
+    pre_sankey <- subset(pre_sankey, select=-1)
+    
+    pre_sankey <- t(pre_sankey)
+    
+    node <- data.frame(
+    name = colnames(pre_sankey),
+    stringsAsFactors = FALSE
+    )
+    
+    sankey <- data.frame(
+    source = integer(),
+    target = integer(),
+    value = numeric(),
+    stringsAsFactors = FALSE
+    )
+    
+    columnas <- colnames(sankey)
+    
+    solid <- c(1, 0, pre_sankey[, "Solid fossil fuels"])
+    sankey <- rbind(sankey, solid)
+    colnames(sankey) <- columnas
+    
+    renov <- c(5, 0, pre_sankey[, "Renewables and biofuels"])
+    sankey <- rbind(sankey, renov)
+    
+    nucl <- c(4, 0, pre_sankey[, "Nuclear"])
+    sankey <- rbind(sankey, nucl)
+    
+    otros <- c(17, 0, pre_sankey[, "Others"])
+    sankey <- rbind(sankey, otros)
+    
+    gas <- c(3, 0, pre_sankey[, "Natural gas"])
+    sankey <- rbind(sankey, gas)
+    
+    oil <- c(2, 0, pre_sankey[, "Oil and petroleum products"])
+    sankey <- rbind(sankey, oil)
+    
+    supply <- c(0, 9, pre_sankey[, "Available for final consumption"])
+    sankey <- rbind(sankey, supply)
+    
+    supply_energy <- c(0, 7, pre_sankey[, "Energy Sector"])
+    sankey <- rbind(sankey, supply_energy)
+    
+    supply_tlosses <- c(0, 6, pre_sankey[, "Transformation Losses"])
+    sankey <- rbind(sankey, supply_tlosses)
+    
+    supply_dlosses <- c(0, 8, pre_sankey[, "Distribution losses"])
+    sankey <- rbind(sankey, supply_dlosses)
+    
+    en_cons <- c(9, 11, pre_sankey[, "Final energy consumption"])
+    sankey <- rbind(sankey, en_cons)
+    
+    non_en_cons <- c(9, 10, pre_sankey[, "Final non-energy consumption"])
+    sankey <- rbind(sankey, non_en_cons)
+    
+    serv <- c(11, 15, pre_sankey[, "Services"])
+    sankey <- rbind(sankey, serv)
+    
+    res <- c(11, 14, pre_sankey[, "Residential"])
+    sankey <- rbind(sankey, res)
+    
+    agr <- c(11, 16, pre_sankey[, "Agriculture and Fishing"])
+    sankey <- rbind(sankey, agr)
+    
+    ind <- c(11, 12, pre_sankey[, "Industry"])
+    sankey <- rbind(sankey, ind)
+    
+    tra <- c(11, 13, pre_sankey[, "Transport"])
+    sankey <- rbind(sankey, tra)
+    
+    sankey$source=as.integer(sankey$source)
+    sankey$target=as.integer(sankey$target)
+    sankey$value=as.numeric(sankey$value)
+    
+    list(nodes=node, links=sankey)
+    })
+    
+    
+    output$html_output <- renderUI({
+      sankeyNetwork(Links = balance()$links, Nodes = balance()$nodes, Source = 'source',
+                Target = 'target', Value = 'value', NodeID = 'name',
+                units = 'Mtoe', fontSize = 12, nodeWidth = 30, width= 900, height=600)
+
+  })
+}
+```
+
+```{r, echo=FALSE}
+sankey_graf <- function(pais){
+ui_pais <- fluidPage(
+  tags$style(HTML("
+    .my-title {
+      font-size: 24px;
+    }
+  ")),
+  
+  div(class = "my-title", pais),
+  
+  tags$head(
+    tags$style(HTML("
+      /* Ajustar el tamaño de fuente para los selectores de entrada */
+      .selectize-input {
+        font-size: 12px; /* Cambiar el tamaño según sea necesario */
+      }
+    "))
+  ),
+  
+  
+  selectInput("year", "Selecciona un año:",
+              choices = as.character(seq(1990, 2020)),
+              selected = "2020"),
+  
+  verbatimTextOutput("resultados"),
+  
+  htmlOutput("html_output")
+)
+
+server_pais <- function(input, output) {
+  
+  balance <- reactive({
+    año <- input$year
+    
+    excel=read_excel(europa, sheet=pais)
+    
+    excel=excel[-c(255:545), ]
+    excel=excel[-c(1:10), ]
+    excel=excel[, -c(1,2)]
+    colnames(excel)=c("Balance", c(1990:2020))
+    excel$`1990` <- as.numeric(excel$`1990`)
+    
+    excel <- excel[-c(1:85), ]
+    excel <- excel[-c(26:95), ]
+    excel <- excel[-c(29:37), ]
+    excel <- excel[-27, ]
+    excel <- excel[-c(29,31,33), ]
+    excel <- excel[-c(32:51), ]
+    
+
+    excel <- excel[-c(3,4), ]
+    excel <- excel[-c(11:20), ]
+    excel <- excel[-7, ]
+    
+    excel[, c(2:32)]=lapply(excel[, c(2:32)], as.numeric)
+    
+    convertir_a_positivo <- function(fila) {
+      return(ifelse(fila < 0, -1 * fila, fila))
+    }
+    
+    excel[, c(2:32)]=lapply(excel[, c(2:32)], convertir_a_positivo)
+    
+    excel <- excel[, colSums(is.na(excel)) != nrow(excel)]
+    
+    agrupar <- excel[c(3,4,10,11,12), ]
+    
+    suma <- agrupar %>%
+      summarise(across(where(is.numeric), sum))
+    
+    otros <- c("Others", as.numeric(suma))
+    
+    excel <- excel[-c(3,4,10,11,12),]
+    
+    excel <- rbind(excel, otros)
+    
+    excel <- excel[-38, ]
+    
+    excel <- excel[-3, ]
+    
+    excel <- excel[-c(14:26),]
+    excel <- excel[-c(15:20),]
+    
+    
+    pre_sankey <- data.frame(Balance = excel$Balance, 'Valor' = excel[, año])
+  
+    rownames(pre_sankey) <- pre_sankey$Balance
+    pre_sankey <- subset(pre_sankey, select=-1)
+    
+    pre_sankey <- t(pre_sankey)
+    
+    node <- data.frame(
+    name = colnames(pre_sankey),
+    stringsAsFactors = FALSE
+    )
+    
+    sankey <- data.frame(
+    source = integer(),
+    target = integer(),
+    value = numeric(),
+    stringsAsFactors = FALSE
+    )
+    
+    columnas <- colnames(sankey)
+    
+    solid <- c(1, 0, pre_sankey[, "Solid fossil fuels"])
+    sankey <- rbind(sankey, solid)
+    colnames(sankey) <- columnas
+    
+    renov <- c(5, 0, pre_sankey[, "Renewables and biofuels"])
+    sankey <- rbind(sankey, renov)
+    
+    nucl <- c(4, 0, pre_sankey[, "Nuclear"])
+    sankey <- rbind(sankey, nucl)
+    
+    otros <- c(17, 0, pre_sankey[, "Others"])
+    sankey <- rbind(sankey, otros)
+    
+    gas <- c(3, 0, pre_sankey[, "Natural gas"])
+    sankey <- rbind(sankey, gas)
+    
+    oil <- c(2, 0, pre_sankey[, "Oil and petroleum products"])
+    sankey <- rbind(sankey, oil)
+    
+    supply <- c(0, 9, pre_sankey[, "Available for final consumption"])
+    sankey <- rbind(sankey, supply)
+    
+    supply_energy <- c(0, 7, pre_sankey[, "Energy Sector"])
+    sankey <- rbind(sankey, supply_energy)
+    
+    supply_tlosses <- c(0, 6, pre_sankey[, "Transformation Losses"])
+    sankey <- rbind(sankey, supply_tlosses)
+    
+    supply_dlosses <- c(0, 8, pre_sankey[, "Distribution losses"])
+    sankey <- rbind(sankey, supply_dlosses)
+    
+    en_cons <- c(9, 11, pre_sankey[, "Final energy consumption"])
+    sankey <- rbind(sankey, en_cons)
+    
+    non_en_cons <- c(9, 10, pre_sankey[, "Final non-energy consumption"])
+    sankey <- rbind(sankey, non_en_cons)
+    
+    serv <- c(11, 15, pre_sankey[, "Services"])
+    sankey <- rbind(sankey, serv)
+    
+    res <- c(11, 14, pre_sankey[, "Residential"])
+    sankey <- rbind(sankey, res)
+    
+    agr <- c(11, 16, pre_sankey[, "Agriculture and Fishing"])
+    sankey <- rbind(sankey, agr)
+    
+    ind <- c(11, 12, pre_sankey[, "Industry"])
+    sankey <- rbind(sankey, ind)
+    
+    tra <- c(11, 13, pre_sankey[, "Transport"])
+    sankey <- rbind(sankey, tra)
+    
+    sankey$source=as.integer(sankey$source)
+    sankey$target=as.integer(sankey$target)
+    sankey$value=as.numeric(sankey$value)
+    
+    list(nodes=node, links=sankey)
+    })
+    
+    
+    output$html_output <- renderUI({
+      sankeyNetwork(Links = balance()$links, Nodes = balance()$nodes, Source = 'source',
+                Target = 'target', Value = 'value', NodeID = 'name',
+                units = 'Mtoe', fontSize = 12, nodeWidth = 30, width = 900, height = 600)
+
+  })
+}
+suppressMessages(shinyApp(ui = ui_pais, server = server_pais, options=list(height=800, width=1000)))
+}
+```
+
+
+```{r, echo=FALSE, include=FALSE}
+
+excel=read_excel(europa, sheet="EU27_2020")
+
+excel=excel[-c(255:545), ]
+excel=excel[-c(1:10), ]
+excel=excel[, -c(1,2)]
+colnames(excel)=c("Balance", c(1990:2020))
+excel$`1990` <- as.numeric(excel$`1990`)
+
+excel <- excel[-c(1:85), ]
+excel <- excel[-c(26:95), ]
+excel <- excel[-c(29:37), ]
+excel <- excel[-27, ]
+excel <- excel[-c(29,31,33), ]
+excel <- excel[-c(32:51), ]
+
+
+excel <- excel[-c(3,4), ]
+excel <- excel[-c(11:20), ]
+excel <- excel[-7, ]
+
+excel[, c(2:32)]=lapply(excel[, c(2:32)], as.numeric)
+
+convertir_a_positivo <- function(fila) {
+  return(ifelse(fila < 0, -1 * fila, fila))
+}
+
+excel[, c(2:32)]=lapply(excel[, c(2:32)], convertir_a_positivo)
+
+excel <- excel[, colSums(is.na(excel)) != nrow(excel)]
+
+agrupar <- excel[c(3,4,10,11,12), ]
+
+suma <- agrupar %>%
+  summarise(across(where(is.numeric), sum))
+
+otros <- c("Others", as.numeric(suma))
+
+excel <- excel[-c(3,4,10,11,12),]
+
+excel <- rbind(excel, otros)
+
+excel <- excel[-38, ]
+
+excel <- excel[-3, ]
+
+excel <- excel[-c(14:26),]
+excel <- excel[-c(15:20),]
+
+aed <- excel[, -1]  
+ 
+año <- as.numeric(colnames(aed))
+
+rownames(aed) <- excel$Balance
+
+aed=t(aed)
+
+aed <- as.data.frame(aed)
+
+for (name in colnames(aed)){
+  aed[[name]] <- as.numeric(aed[[name]])
+}
+
+aed_europa <- aed
+
+pob_europa <- 447485231
+```
+
+
+```{r, echo=FALSE}
+tend_fuentes <- function(pais, pob_pais){
+    excel=read_excel(europa, sheet=pais)
+    
+    excel=excel[-c(255:545), ]
+    excel=excel[-c(1:10), ]
+    excel=excel[, -c(1,2)]
+    colnames(excel)=c("Balance", c(1990:2020))
+    excel$`1990` <- as.numeric(excel$`1990`)
+    
+    excel <- excel[-c(1:85), ]
+    excel <- excel[-c(26:95), ]
+    excel <- excel[-c(29:37), ]
+    excel <- excel[-27, ]
+    excel <- excel[-c(29,31,33), ]
+    excel <- excel[-c(32:51), ]
+    
+
+    excel <- excel[-c(3,4), ]
+    excel <- excel[-c(11:20), ]
+    excel <- excel[-7, ]
+    
+    excel[, c(2:32)]=lapply(excel[, c(2:32)], as.numeric)
+    
+    convertir_a_positivo <- function(fila) {
+      return(ifelse(fila < 0, -1 * fila, fila))
+    }
+    
+    excel[, c(2:32)]=lapply(excel[, c(2:32)], convertir_a_positivo)
+    
+    excel <- excel[, colSums(is.na(excel)) != nrow(excel)]
+    
+    agrupar <- excel[c(3,4,10,11,12), ]
+    
+    suma <- agrupar %>%
+      summarise(across(where(is.numeric), sum))
+    
+    otros <- c("Others", as.numeric(suma))
+    
+    excel <- excel[-c(3,4,10,11,12),]
+    
+    excel <- rbind(excel, otros)
+    
+    excel <- excel[-38, ]
+    
+    excel <- excel[-3, ]
+    
+    excel <- excel[-c(14:26),]
+    excel <- excel[-c(15:20),]
+   
+    aed <- excel[, -1]  
+     
+    año <- as.numeric(colnames(aed))
+    
+    aed <- as.data.frame(aed)
+
+    rownames(aed) <- excel$Balance
+    
+    aed=t(aed)
+    
+    aed <- as.data.frame(aed)
+    
+    for (name in colnames(aed)){
+      aed[[name]] <- as.numeric(aed[[name]])
+    }
+    
+    comp <- (aed_europa/pob_europa)*pob_pais
+    
+    if (pais=="EU27_2020"){
+    grafico <- ggplot() +
+    geom_line(data = aed, aes(x = año, y = `Solid fossil fuels`, color = "Solid fossil fuels")) +
+    geom_line(data = aed, aes(x = año, y = `Oil and petroleum products`, color = "Oil and petroleum products")) +
+    geom_line(data = aed, aes(x = año, y = `Natural gas`, color = "Natural gas")) +
+    geom_line(data = aed, aes(x = año, y = Nuclear, color = "Nuclear")) +
+    geom_line(data = aed, aes(x = año, y = `Renewables and biofuels`, color = "Renewables and biofuels")) +
+    geom_line(data = aed, aes(x = año, y = Others, color = "Others")) +
+    labs(x = "Año", y = "Energía (Mtoe)") + ggtitle(pais)+
+    scale_color_manual(name = "Tendencia de la Oferta Energética",
+                       values = c("Solid fossil fuels" = "blue", "Oil and petroleum products" = "red",
+                                  "Natural gas" = "green",
+                                  "Nuclear" = "purple", "Renewables and biofuels" = "orange",
+                                  "Others" = "pink"))
+    }
+    else {
+  grafico <- ggplot() +
+    geom_line(data = aed, aes(x = año, y = `Solid fossil fuels`, color = "Solid fossil fuels")) +
+    geom_line(data = aed, aes(x = año, y = `Oil and petroleum products`, color = "Oil and petroleum products")) +
+    geom_line(data = aed, aes(x = año, y = `Natural gas`, color = "Natural gas")) +
+    geom_line(data = aed, aes(x = año, y = Nuclear, color = "Nuclear")) +
+    geom_line(data = aed, aes(x = año, y = `Renewables and biofuels`, color = "Renewables and biofuels")) +
+    geom_line(data = aed, aes(x = año, y = Others, color = "Others")) +
+    geom_line(data = comp, aes(x = año, y = `Solid fossil fuels`, color = "Solid fossil fuels"), linetype="dotted") +
+    geom_line(data = comp, aes(x = año, y = `Oil and petroleum products`, color = "Oil and petroleum products"), linetype="dotted") +
+    geom_line(data = comp, aes(x = año, y = `Natural gas`, color = "Natural gas"), linetype="dotted") +
+    geom_line(data = comp, aes(x = año, y = Nuclear, color = "Nuclear"), linetype="dotted") +
+    geom_line(data = comp, aes(x = año, y = `Renewables and biofuels`, color = "Renewables and biofuels"), linetype="dotted") +
+    geom_line(data = comp, aes(x = año, y = Others, color = "Others"), linetype="dotted") +
+    labs(x = "Año", y = "Energía (Mtoe)") + ggtitle(pais) +
+    scale_color_manual(name = "Tendencia de la Oferta Energética",
+                       values = c("Solid fossil fuels" = "blue", "Oil and petroleum products" = "red",
+                                  "Natural gas" = "green",
+                                  "Nuclear" = "purple", "Renewables and biofuels" = "orange",
+                                  "Others" = "pink"))
+    }
+    print(grafico)
+}
+```
+
+```{r, echo=FALSE}
+tend_perd <- function(pais, pob_pais){
+    excel=read_excel(europa, sheet=pais)
+    
+    excel=excel[-c(255:545), ]
+    excel=excel[-c(1:10), ]
+    excel=excel[, -c(1,2)]
+    colnames(excel)=c("Balance", c(1990:2020))
+    excel$`1990` <- as.numeric(excel$`1990`)
+    
+    excel <- excel[-c(1:85), ]
+    excel <- excel[-c(26:95), ]
+    excel <- excel[-c(29:37), ]
+    excel <- excel[-27, ]
+    excel <- excel[-c(29,31,33), ]
+    excel <- excel[-c(32:51), ]
+    
+
+    excel <- excel[-c(3,4), ]
+    excel <- excel[-c(11:20), ]
+    excel <- excel[-7, ]
+    
+    excel[, c(2:32)]=lapply(excel[, c(2:32)], as.numeric)
+    
+    convertir_a_positivo <- function(fila) {
+      return(ifelse(fila < 0, -1 * fila, fila))
+    }
+    
+    excel[, c(2:32)]=lapply(excel[, c(2:32)], convertir_a_positivo)
+    
+    excel <- excel[, colSums(is.na(excel)) != nrow(excel)]
+    
+    agrupar <- excel[c(3,4,10,11,12), ]
+    
+    suma <- agrupar %>%
+      summarise(across(where(is.numeric), sum))
+    
+    otros <- c("Others", as.numeric(suma))
+    
+    excel <- excel[-c(3,4,10,11,12),]
+    
+    excel <- rbind(excel, otros)
+    
+    excel <- excel[-38, ]
+    
+    excel <- excel[-3, ]
+    
+    excel <- excel[-c(14:26),]
+    excel <- excel[-c(15:20),]
+   
+    aed <- excel[, -1]  
+     
+    año <- as.numeric(colnames(aed))
+    
+    aed <- as.data.frame(aed)
+
+    rownames(aed) <- excel$Balance
+    
+    aed=t(aed)
+    
+    aed <- as.data.frame(aed)
+    
+    for (name in colnames(aed)){
+      aed[[name]] <- as.numeric(aed[[name]])
+    }
+    
+    comp <- (aed_europa/pob_europa)*pob_pais
+    
+    if (pais=="EU27_2020"){
+    grafico <- ggplot() +
+    geom_line(data = aed, aes(x = año, y = `Transformation Losses`, color = "Transformation Losses")) +
+    geom_line(data = aed, aes(x = año, y = `Energy Sector`, color = "Energy Sector")) +
+    geom_line(data = aed, aes(x = año, y = `Distribution losses`, color = "Distribution losses")) +
+    labs(x = "Año", y = "Energía (Mtoe)") + ggtitle(pais)+
+    scale_color_manual(name = "Tendencia de las Pérdidas Energética",
+                       values = c("Transformation Losses" = "blue", "Energy Sector" = "red",
+                                  "Distribution losses" = "green"))
+    }
+    else{
+    grafico <- ggplot() +
+    geom_line(data = aed, aes(x = año, y = `Transformation Losses`, color = "Transformation Losses")) +
+    geom_line(data = aed, aes(x = año, y = `Energy Sector`, color = "Energy Sector")) +
+    geom_line(data = aed, aes(x = año, y = `Distribution losses`, color = "Distribution losses")) +
+    geom_line(data = comp, aes(x = año, y = `Transformation Losses`, color = "Transformation Losses"), linetype="dotted") +
+    geom_line(data = comp, aes(x = año, y = `Energy Sector`, color = "Energy Sector"), linetype="dotted") +
+    geom_line(data = comp, aes(x = año, y = `Distribution losses`, color = "Distribution losses"), linetype="dotted") +
+    labs(x = "Año", y = "Energía (Mtoe)") + ggtitle(pais)+
+    scale_color_manual(name = "Tendencia de las Pérdidas Energética",
+                       values = c("Transformation Losses" = "blue", "Energy Sector" = "red",
+                                  "Distribution losses" = "green"))
+    }
+    print(grafico)
+}
+```
+
+```{r, echo=FALSE}
+tend_sectores <- function(pais, pob_pais){
+    excel=read_excel(europa, sheet=pais)
+    
+    excel=excel[-c(255:545), ]
+    excel=excel[-c(1:10), ]
+    excel=excel[, -c(1,2)]
+    colnames(excel)=c("Balance", c(1990:2020))
+    excel$`1990` <- as.numeric(excel$`1990`)
+    
+    excel <- excel[-c(1:85), ]
+    excel <- excel[-c(26:95), ]
+    excel <- excel[-c(29:37), ]
+    excel <- excel[-27, ]
+    excel <- excel[-c(29,31,33), ]
+    excel <- excel[-c(32:51), ]
+    
+
+    excel <- excel[-c(3,4), ]
+    excel <- excel[-c(11:20), ]
+    excel <- excel[-7, ]
+    
+    excel[, c(2:32)]=lapply(excel[, c(2:32)], as.numeric)
+    
+    convertir_a_positivo <- function(fila) {
+      return(ifelse(fila < 0, -1 * fila, fila))
+    }
+    
+    excel[, c(2:32)]=lapply(excel[, c(2:32)], convertir_a_positivo)
+    
+    excel <- excel[, colSums(is.na(excel)) != nrow(excel)]
+    
+    agrupar <- excel[c(3,4,10,11,12), ]
+    
+    suma <- agrupar %>%
+      summarise(across(where(is.numeric), sum))
+    
+    otros <- c("Others", as.numeric(suma))
+    
+    excel <- excel[-c(3,4,10,11,12),]
+    
+    excel <- rbind(excel, otros)
+    
+    excel <- excel[-38, ]
+    
+    excel <- excel[-3, ]
+    
+    excel <- excel[-c(14:26),]
+    excel <- excel[-c(15:20),]
+   
+    aed <- excel[, -1]  
+     
+    año <- as.numeric(colnames(aed))
+    
+    aed <- as.data.frame(aed)
+
+    rownames(aed) <- excel$Balance
+    
+    aed=t(aed)
+    
+    aed <- as.data.frame(aed)
+    
+    for (name in colnames(aed)){
+      aed[[name]] <- as.numeric(aed[[name]])
+    }
+    
+    comp <- (aed_europa/pob_europa)*pob_pais
+
+    
+    if (pais=="EU27_2020"){
+    grafico <- ggplot() +
+    geom_line(data = aed, aes(x = año, y = Industry, color = "Industry")) +
+    geom_line(data = aed, aes(x = año, y = Transport, color = "Transport")) +
+    geom_line(data = aed, aes(x = año, y = Residential, color = "Residential")) +
+    geom_line(data = aed, aes(x = año, y = Services, color = "Services")) +
+    geom_line(data = aed, aes(x = año, y = `Agriculture and Fishing`, color = "Agriculture and Fishing")) +
+    labs(x = "Año", y = "Energía (Mtoe)") + ggtitle(pais)+
+    scale_color_manual(name = "Tendencia del Consumo Energético",
+                       values = c("Industry" = "blue", "Transport" = "red",
+                                  "Residential" = "green",
+                                  "Services" = "purple", "Agriculture and Fishing" = "orange"))  
+    }
+    else{
+    grafico <- ggplot() +
+    geom_line(data = aed, aes(x = año, y = Industry, color = "Industry")) +
+    geom_line(data = aed, aes(x = año, y = Transport, color = "Transport")) +
+    geom_line(data = aed, aes(x = año, y = Residential, color = "Residential")) +
+    geom_line(data = aed, aes(x = año, y = Services, color = "Services")) +
+    geom_line(data = aed, aes(x = año, y = `Agriculture and Fishing`, color = "Agriculture and Fishing")) +
+    geom_line(data = comp, aes(x = año, y = Industry, color = "Industry"), linetype="dotted") +
+    geom_line(data = comp, aes(x = año, y = Transport, color = "Transport"), linetype="dotted") +
+    geom_line(data = comp, aes(x = año, y = Residential, color = "Residential"), linetype="dotted") +
+    geom_line(data = comp, aes(x = año, y = Services, color = "Services"), linetype="dotted") +
+    geom_line(data = comp, aes(x = año, y = `Agriculture and Fishing`, color = "Agriculture and Fishing"), linetype="dotted") +
+    labs(x = "Año", y = "Energía (Mtoe)") + ggtitle(pais)+
+    scale_color_manual(name = "Tendencia del Consumo Energético",
+                       values = c("Industry" = "blue", "Transport" = "red",
+                                  "Residential" = "green",
+                                  "Services" = "purple", "Agriculture and Fishing" = "orange"))
+    }
+    print(grafico)
+}
+```
+
+```{r, echo=FALSE}
+suppressMessages(shinyApp(ui = ui, server = server, options=list(height=800, width=1000)))
+```
+
+# Unión Europea – EU27_2020
+
+Respecto a los datos publicados en 2020 la Unión Europea fundamenta su oferta energética sobre los productos petrolíferos y el gas natural. En menor medida las renovables, la nuclear y los combustibles sólidos fósiles (carbón) también toman un papel importante. Esto muestra que el proceso de descarbonización, aunque avanzado, todavía está lejos de cumplir sus objetivos.
+
+```{r, echo=FALSE}
+suppressMessages(sankey_graf("EU27_2020"))
+```
+
+Además, la energía de la Unión Europea depende sustancialmente de materias primas que no se producen en la suficiente medida dentro de la unión. Si los combustibles fósiles siguen acaparando la mayor parte de la oferta energética comunitaria, la Unión Europea seguirá siendo un actor energéticamente dependiente de otras potencias. Si no se produce ningún cambio en los años venideros esta situación lastrará la posición geopolítica y económica de la unión.
+
+```{r, echo=FALSE}
+suppressMessages(tend_fuentes("EU27_2020", pob_europa))
+```
+
+No obstante, si se observa el balance energético de los años anteriores, se discierne que se ha producido un avance significativo hacia la normalización del uso de fuentes renovables.
+
+```{r, echo=FALSE}
+suppressMessages(tend_perd("EU27_2020", pob_europa))
+```
+
+En cuanto a las pérdidas de energía por transformación, distribución o consumo del propio sector energético no consideramos que se tomen valores especialmente alarmantes. De hecho, cada año la energía perdida en la transformación o distribución es menor lo que indica una mayor eficiencia de las infraestructuras energéticas europeas.
+
+```{r, echo=FALSE}
+suppressMessages(tend_sectores("EU27_2020", pob_europa))
+```
+
+Para finalizar comentaremos la distribución del consumo energético comunitario. La vivienda, el transporte y la industria son los tres sectores que más peso tienen sobre el consumo. Es entendible si consideramos que en Europa se combinan climas fríos en el norte y cálidos en el sur, lo que aumenta el consumo energético residencial, y una economía industrializada que en parte se sustenta por un modelo de transporte que atraviesa las grandes distancias que separan distintos puntos del continente. 
+Cada año la industria tiene menos peso en esta distribución, lo que puede indicar una desindustrialización o una mayor eficiencia en el consumo industrial. Para comprobarlo vamos a estudiar los datos de las importaciones sobre el PIB de 1990 a 2020. Si apreciamos un aumento de las importaciones esto confirmará una desindustrialización en el continente.
+
+```{r, echo=FALSE}
+imp <- read_excel("DATOS OBJ 1/API_NE.IMP.GNFS.ZS_DS2_es_excel_v2_328181.xls")
+años <- as.numeric(colnames(imp)[-1])
+valores <- as.numeric(imp[-1])
+
+plot(años, valores, type="o", col="blue",
+     xlab="Año", ylab="% Importaciones sobre el PIB", main="Importaciones sobre el PIB de 1990 a 2020 en la UE")
+```
+
+Las importaciones han sufrido un incremento considerable en los años estudiados, lo que refuerza la hipótesis de la desindustrialización del continente. Si esta tendencia continua, Europa perderá soberanía sobre los productos que consume y dependerá de la producción de potencias externas, con los perjuicios que ello conlleva. 
+
+En cambio, los servicios y la agricultura cada vez tienen más peso sobre el consumo comunitario, probablemente debido a este descenso del consumo industrial.
+
+Según la información obtenida con nuestra aplicación podemos concluir que la Unión Europea es una potencia en vías de independizarse energéticamente que aún tiene un largo camino por recorrer. Asimismo, cuenta con unas infraestructuras energéticas de primer nivel que se encuentran en continuo desarrollo. Económicamente podemos definirla como una potencia industrial en decadencia donde sectores que requieren de un menor consumo energético como los servicios están ganando terreno.
+
+**Aclaración**
+Para estudiar los balances energéticos de los estados miembros de la Unión Europea los vamos a comparar con los resultados obtenidos a nivel comunitario. Para poder llevar a cabo esta comparación dividimos los resultados europeos por la población de la UE en 2020 y los multiplicamos por la población del país analizado en 2020. En los gráficos los resultados europeos aparecen punteados.
+
+# Alemania – DE
+
+El país germano destaca por ser la mayor potencia económica e industrial de la Unión Europea. Lo que conlleva que la situación energética alemana sea de vital importancia para toda la unión.
+
+```{r, echo=FALSE}
+suppressMessages(sankey_graf("DE"))
+```
+
+Si analizamos los datos de 2020 vemos que la oferta energética de carbón es anormalmente elevada mientras que la de nuclear es anormalmente reducida. No obstante, la oferta de energías renovables, gas natural y productos petrolíferos no rompe con la normalidad europea. Esto se debe a que las políticas antinucleares tomadas por el gobierno teutón en los últimos años han provocado una situación donde el sistema energético no está preparado para suplir la oferta faltante mediante energías renovables. La solución a la que se ha llegado es el uso de carbón, que además de ser más caro que la energía nuclear y las renovables es considerablemente más contaminante. Esto abre un debate sobre el ritmo necesario para llevar a cabo la transición energética y si la energía nuclear es el mejor aliado posible para suplir los déficits de la energía renovable.
+
+```{r, echo=FALSE}
+pob_ale <- 83166711
+suppressMessages(tend_fuentes("DE", pob_ale))
+```
+
+Pero no todo son malas noticias para el sistema energético alemán, si nos centramos en la evolución de la distribución de su oferta energética apreciamos un considerable aumento de las energías renovables y un descenso del carbón. 
+
+Sin embargo, la dependencia del gas natural y los productos petrolíferos es demasiado elevada para tratarse del motor económico europeo. Sería conveniente para la estabilidad en el continente que la oferta energética germana se centrara en fuentes de energía que puedan ser abastecidas dentro de la UE.
+
+```{r, echo=FALSE}
+suppressMessages(tend_perd("DE", pob_ale))
+```
+
+La evolución de las pérdidas energéticas es positiva, lo que indica una mayor eficiencia de las infraestructuras alemanas. 
+
+```{r, echo=FALSE}
+suppressMessages(tend_sectores("DE", pob_ale))
+```
+
+La distribución del consumo energético en Alemania se centra en los mismos sectores que en el resto de la unión. La nación germana destaca por un mayor consumo residencial y en el sector servicios, fruto de las bajas temperaturas, y un mayor consumo industrial, lo que no es sorprendente si tenemos en cuenta que se trata del mayor foco industrial de Europa.
+Si nos fijamos en la evolución, vemos que el consumo industrial tiene más peso cada año. Esto muestra a la economía alemana como una economía soberana y saludable que puede depender de los productos que se fabrican dentro de sus fronteras. Esto es razonable teniendo en cuenta que nuestros datos acaban en 2020, por lo que se evita la crisis energética que ha sacudido a Alemania tras la llegada de las sanciones a Rusia, donde se han hecho evidentes las costuras del sistema energético alemán.
+En conclusión, Alemania es un país con una oferta energética inestable, pero con unos resultados finales robustos. Por lo tanto, mientras no haya grandes crisis la economía alemana seguirá creciendo sin problemas, pero cuando lleguen los inconvenientes el castillo de naipes caerá debido a la mala planificación de su oferta energética, lo que afecta negativamente a la economía de todos los países miembros.
+
+# España - ES
+
+España es una de las principales economías de la Unión Europea y uno de los focos más activos del Mediterráneo. Pese al estancamiento económico acontecido tras la crisis de 2008, el país ha conseguido progresar económicamente ayudándose de un aumento de la actividad apoyado en la alta producción de energías renovables.
+
+```{r, echo=FALSE}
+suppressMessages(sankey_graf("ES"))
+```
+
+En el año 2020, la oferta energética española se sustenta sobre los productos petrolíferos y el gas natural. En menor medida la energía nuclear y las renovables suplen el resto de la oferta energética con valores cercanos a la media europea. El uso de carbón es residual. Aunque esta distribución no diste de la media europea, no es satisfactorio para un país que pretende ser independiente respecto a su producción energética.
+
+```{r, echo=FALSE}
+pob_esp <- 47332614	
+suppressMessages(tend_fuentes("ES", pob_esp))
+```
+
+Fijándonos en su evolución, discernimos un considerable aumento del uso de renovables y gas natural seguido de un descenso del uso de carbón y productos petrolíferos. Estas son buenas noticias para el sistema energético español puesto que las renovables y el gas natural son notablemente menos contaminantes y su suministro al sistema es más fiable (el gas natural es suministrado a España principalmente por Argelia mediante gasoductos, por lo que su suministro es más sencillo y barato que el de petróleo que llega en barcos).
+
+```{r, echo=FALSE}
+suppressMessages(tend_perd("ES", pob_esp))
+```
+
+En España las pérdidas de energía no han seguido el mismo descenso continuado que en la Unión Europea, sino que han aumentado o mantenido sus valores año tras año. Solo a partir de 2018 se ha empezado a producir un descenso considerable. Esto se puede explicar por la ausencia de mejoras notables en las infraestructuras eléctricas españolas en los últimos años. Sin embargo, la media de energía pérdida per cápita en Europa es mayor que en España lo que muestra la buena calidad de dichas infraestructuras pese a su estancamiento.
+
+En cuanto al consumo energético de cada sector en el año 2020 observamos las siguientes realidades. El consumo residencial es considerablemente menor que la media europea, consecuencia del buen tiempo propio del clima mediterráneo. El consumo industrial español es menor que el europeo, lo que muestra que España es un país desindustrializado basándonos en los estándares europeos. El transporte destaca sorprendentemente sobre el resto de	sectores, probablemente por las grandes distancias que separan los grandes centros económicos del país. Los servicios y la agricultura toman valores predecibles.
+
+```{r, echo=FALSE}
+suppressMessages(tend_sectores("ES", pob_esp))
+```
+
+Si analizamos la evolución del consumo energético vemos que el consumo industrial y de transportes, fuertemente ligado con la actividad económica, sufre un notable descenso a partir de la crisis de 2008. La caída es continuada hasta 2015 donde ocurre un cambio de tendencia fruto del fin de los efectos de la crisis. Los sectores servicios y residenciales han seguido un constante aumento y no han sufrido los efectos de la crisis, consecuencia del incremento de la instalación de sistemas de regulación térmica en la mayoría de las viviendas y negocios de España.
+
+Conforme al análisis realizado podemos concluir que España es un país cuya oferta energética está abandonando las fuentes más contaminantes y se decide por otras menos contaminantes y más seguras para el suministro del país, aunque aún queda camino por recorrer en este respecto. Las infraestructuras energéticas se estancaron fruto de la crisis y se tardó en producir un descenso de las pérdidas energéticas. Económicamente es un país que está tratando de volver a la estabilidad previa a la crisis y para ello trata de suplir la oferta de sus sectores clave con fuentes de energías fiables, que apoyen la transición ecológica y modernización del país.
+
+# Italia - IT
+
+Italia es otro de los grandes centros económicos del sur de Europa y seguramente el país más similar a España. Al igual que el país hispano ha sufrido un prolongado estancamiento económico tras la crisis de 2008.  Pero siguiendo la tendencia de los países mediterráneos ha sabido reformar su economía para recuperarse de ese bache e iniciar un lento pero continuado crecimiento económico.
+
+```{r, echo=FALSE}
+suppressMessages(sankey_graf("IT"))
+```
+
+Centrándonos en la distribución de su oferta energética apreciamos que se sustenta principalmente en los productos petrolíferos y el gas natural, siendo el uso de este último especialmente elevado respecto a la UE. Las energías renovables hacen una aparición nada desdeñable siguiendo los estándares europeos. Por otro lado sorprende la oferta casi inexistente de energía nuclear. Italia es un país que gracias a los acuerdos energéticos con Argelia tiene un suministro fiable de hidrocarburos y que por lo tanto no se ha visto obligada a desarrollar alternativas de producción propia. Pese a las ventajas económicas esto hace que Italia dependa de otros actores para una gran parte de su suministro.
+
+```{r, echo=FALSE}
+pob_ita <- 59641488
+suppressMessages(tend_fuentes("IT", pob_ita))
+```
+
+Si nos fijamos en la evolución vemos que Italia ha querido suplir esta falta de producción propia con un considerable aumento del uso de renovables. Además, ha reducido la oferta de energías más contaminantes como el petróleo y el carbón mientras aumentaba la de una energía más neutra como el gas natural.
+
+```{r, echo=FALSE}
+suppressMessages(tend_perd("IT", pob_ita))
+```
+
+Respecto a las pérdidas energéticas vemos que son considerablemente menores que la media comunitaria y han seguido la misma tendencia negativa que la UE, lo que muestra una mejora de la eficiencia del sistema energético italiano en los últimos años.
+
+```{r, echo=FALSE}
+suppressMessages(tend_sectores("IT", pob_ita))
+```
+
+En cuanto al consumo energético por sectores vemos que la industria es el único sector que difiere significativamente de la media europea, tomando valores considerablemente menores a esta. 
+
+Si estudiamos la evolución de esta distribución, vemos que el consumo residencial y del sector servicios ha avanzado hasta alcanzar valores europeos mientras que el industrial ha seguido la tendencia contraria. Esto muestra una notable desindustrialización del país a partir de la crisis de 2008.
+
+A modo de conclusión, podemos definir a Italia como una potencia económica que a partir de la crisis de 2008 tuvo que cambiar un modelo basado en la producción industrial a otro basado en el sector servicios. Esto hace que su demanda energética sea satisfactoriamente suministrada por terceros países y no tenga que innovar o buscar alternativas para suplirla. No obstante, esto hace de Italia un país que carece de producción industrial y energética y que depende de terceros países para sobrevivir. Aunque en los últimos años ha gozado de una ligera bonanza económica consecuencia de un contexto internacional favorable, no va a poder avanzar por sí mismo si el contexto no acompaña.
+
+# Francia - FR
+
+El país galo es junto a Alemania el corazón de la Unión Europea. Consiguió sortear los efectos de la crisis mejor que el resto de países mediterráneos y ha creado una senda de desarrollo económico sustentada en el autoabastecimiento energético mediante la energía nuclear.
+
+```{r, echo=FALSE}
+suppressMessages(sankey_graf("FR"))
+```
+
+Esto se confirma si estudiamos la distribución de su oferta energética. La energía nuclear tiene el triple de oferta que la media europea. Por otro lado, su oferta de energías contaminantes como el carbón o que no se producen en suelo europeo como el gas natural es significativamente menor que en el resto de países comunitarios. Añade a su oferta energética una cantidad considerable de energías renovables que convierte a Francia en uno de los países europeos con mayor independencia energética.
+
+```{r, echo=FALSE}
+pob_fra <- 67485531
+suppressMessages(tend_fuentes("FR", pob_fra))
+```
+
+No ha habido grandes cambios en esta distribución en los últimos años, destacando el descenso del uso de productos petrolíferos y el aumento de energías renovables. Esta estrategia va acorde a la búsqueda de una mayor autonomía.
+
+```{r, echo=FALSE}
+suppressMessages(tend_perd("FR", pob_fra))
+```
+
+La energía perdida es notablemente superior que la media europea, lo que indica una baja eficiencia de las infraestructuras energéticas galas.
+
+```{r, echo=FALSE}
+suppressMessages(tend_sectores("FR", pob_fra))
+```
+
+Conforme al consumo energético por sectores observamos que Francia es un país con menor consumo industrial que la media europea y cuyo consumo se centra en transporte y consumo residencial. Teniendo en cuenta la evolución, vemos que el consumo industrial se ha ido reduciendo con los años mientras aumentaba el consumo del sector servicios. Esto muestra que Francia, como casi todos los países europeos ha sufrido una desindustrialización durante los últimos años.
+En conclusión, Francia tiene un sistema energético sólido que es capaz de suministrar fiablemente energía a todo el país sin depender de las decisiones de terceros países. Eso le de al país estabilidad para el desarrollo de sus actividades económicas. No obstante, no ha podido evitar la desindustrialización propia de los países occidentales durante los últimos años lo que le quita cierta soberanía y lastra en parte su estrategia de autonomía energética.
+
+# Grecia - EL
+
+Grecia, pese a ser la cuna de la civilización occidental y un país con relevancia geopolítica y económica dentro del Mediterráneo, es uno de los países europeos que más ha sufrido los efectos de las crisis y con menor desarrollo económico.
+
+```{r, echo=FALSE}
+suppressMessages(sankey_graf("EL"))
+```
+
+Si observamos la distribución de su oferta energética conocemos que esta se sustenta principalmente sobre los productos petrolíferos. En menor medida toman parte el gas natural, las renovables y el carbón. El uso de energías nucleares es inexistente.
+Esto muestra un país muy atrasado en la transición energética y con una planificación más centrada en el corto plazo que en desarrollar una estrategia energética a largo plazo para el país.
+
+```{r, echo=FALSE}
+pob_gre <- 10718565
+suppressMessages(tend_fuentes("EL", pob_gre))
+```
+
+No obstante, el país heleno ha evolucionado positivamente en los últimos 30 años. Antes el carbón suponía casi la mitad de su oferta energética, y las energías renovables o el gas natural no se tenían en cuenta.
+
+```{r, echo=FALSE}
+suppressMessages(tend_perd("EL", pob_gre))
+```
+
+Las perdidas energéticas son menores que la media europea, por lo que al menos las infraestructuras griegas son de calidad.
+
+```{r, echo=FALSE}
+suppressMessages(tend_sectores("EL", pob_gre))
+```
+
+El consumo energético griego es menor que la media europea en todos los sectores, lo que muestra una economía parada y débil. En cuanto a su evolución, el consumo industrial y agrario se ha visto reducido mientras que el residencial y el sector servicios han aumentado. Esto muestra que Grecia también está siendo desindustrializada.
+
+En conclusión, Grecia es un país que carece de un proyecto energético a largo plazo que les ayude a ser autónomos y poder desarrollar correctamente su propia economía. Mientras tanto lidian con una economía lastrada por la inactividad y la carencia de producción propia.
+
+# Portugal - PT
+
+Portugal; junto a Italia, Grecia y España; formó parte de los mal llamados PIGS. Un grupo de países que fueron atacados por los economistas del norte por su mal rendimiento económico durante la crisis y que se vieron obligados a llevarse la peor parte de esta. Con lo analizado anteriormente en este informe, hemos visto que Italia y España han conseguido reconstruir sus economías e iniciar una senda de progreso; mientras que Grecia aún está muy atrasada en ese respecto. A continuación, estudiaremos cuál es la situación de Portugal.
+
+```{r, echo=FALSE}
+suppressMessages(sankey_graf("PT"))
+```
+
+Conforme a la distribución de la oferta energética del país destaca el elevado uso de energías renovables, erigiéndose como la segunda fuente de energía más usada. Le sigue de cerca el gas natural y ocupan la primera posición los productos petrolíferos. El uso de carbón es residual y la oferta de nuclear es inexistente.
+
+```{r, echo=FALSE}
+pob_por <- 10295909
+suppressMessages(tend_fuentes("PT", pob_por))
+```
+
+Si analizamos la evolución apreciamos como el uso de renovables y gas natural ha aumentado significativamente los últimos años mientras que el de productos petrolíferos y carbón se ha visto reducido. Esto demuestra que Portugal ha seguido una estrategia de descarbonización de su economía apostando por fuentes de energía menos contaminantes. Además, una alta proporción de energías renovables dota al país de una mayor soberanía energética.
+
+```{r, echo=FALSE}
+suppressMessages(tend_perd("PT", pob_por))
+```
+
+Portugal cuenta con una de las infraestructuras energéticas más eficientes de Europa, con unas pérdidas energéticas minúsculas respecto a la media comunitaria.
+
+```{r, echo=FALSE}
+suppressMessages(tend_sectores("PT", pob_por))
+```
+
+Estudiando la distribución por sectores del consumo energético apreciamos que en todos los sectores se consume menos que la media europea. Esto es síntoma de una economía inactiva. Destaca el reducido consumo residencial, consecuencia del buen clima que caracteriza al país luso.
+
+En cuanto a la evolución de dicha distribución vemos que el consumo industrial y de transporte se ha visto reducido mientras que el del sector servicios ha aumentado; consecuencia de la desindustrialización del país tras la crisis.
+
+En conclusión, Portugal es un país que ha decidido aplicar una estrategia de descarbonización con la meta de reducir la emisión de gases contaminantes y aumentar su soberanía energética. No obstante, la falta de energía nuclear le aleja de este objetivo. Antes de la crisis era un país con una actividad cercana a los estándares europeos, como podemos confirmar en el gráfico de consumo si observamos el consumo industrial y de transportes, pero tras la crisis se convirtió en una nación lastrada por la inactividad económica y que se sustenta en el sector servicios.

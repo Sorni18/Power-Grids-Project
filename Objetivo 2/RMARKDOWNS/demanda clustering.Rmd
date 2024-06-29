@@ -1,0 +1,621 @@
+---
+title: "CLUSTERING DEMANDA (OBJETIVO 2)"
+author: "Aleixandre"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+      runmode: shiny
+      toc: true
+      number_sections: false
+      toc_depth: 2
+      toc_float:
+        collapsed: false
+        smooth_scroll: true
+      warnings: false
+runtime: shiny
+---
+
+En este documento, exploraremos la aplicación de técnicas de clustering para analizar los datos de demanda de energía, dichos datos se encuentran recabados en **df_demanda**, donde se muestra la media de mwh por dia durante ese trimestre para cada comunidad autónoma. El objetivo es agrupar las diferentes comunidades autónomas en función de los valores obtenidos y las distancias entre estos. Al emplear estas técnicas, buscamos identificar patrones y relaciones entre las ccaa, lo que permitirá una mejor comprensión. A lo largo del estudio, examinaremos diversas métricas y algoritmos de clustering, evaluando su efectividad para nuestro conjunto de datos específico, así como estableceremos relaciones con el resto de objetivos del grupo para poder justificar por qué se establecen estos patrones.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE,message = FALSE , echo = TRUE)
+```
+
+# **LIBRERÍAS**
+
+```{r, warning=FALSE}
+library(ggplot2)
+library(readxl)
+library(shiny)
+library(leaflet)
+library(plotly)
+library(sf)
+library(data.table)
+library(tibble)
+library(tidyr)
+library(reshape2)
+library(FactoMineR)
+library(factoextra)
+library(factoextra)
+library(gridExtra)
+library(grid)
+library(cluster)
+library(dbscan)
+library(magrittr)
+library(dplyr)
+library(knitr)
+library(clustertend)
+library(NbClust)
+library(fpc)
+library(clValid)
+library(kohonen)
+library(mapSpain)
+library(tidyverse)
+library(sf)
+library(htmltools)
+```
+
+# **PREPARACIÓN BBDD**
+
+Primero, importaremos los archivos que hemos utilizado, los cuales vienen en formato ".csv" y contienen datos de generación y demanda de energía por meses desde 2013 hasta 2023, aunque en este caso solo nos quedaremos con los de generación. Cada archivo representa una comunidad autónoma distinta.
+
+```{r,warning=FALSE}
+andalucia = read.csv("DATOS OBJETIVO 2/Andalucía_genvsdem.csv", row.names = 1, as.is = TRUE)
+aragon = read.csv("DATOS OBJETIVO 2/Aragón_genvsdem.csv", row.names = 1, as.is = TRUE)
+asturias = read.csv("DATOS OBJETIVO 2/Asturias, Principado de_genvsdem.csv", row.names = 1, as.is = TRUE)
+baleares = read.csv("DATOS OBJETIVO 2/Balears, Illes_genvsdem.csv", row.names = 1, as.is = TRUE)
+canarias = read.csv("DATOS OBJETIVO 2/Canarias_genvsdem.csv", row.names = 1, as.is = TRUE)
+cantabria = read.csv("DATOS OBJETIVO 2/Cantabria_genvsdem.csv", row.names = 1, as.is = TRUE)
+castillalamancha = read.csv("DATOS OBJETIVO 2/Castilla - La Mancha_genvsdem.csv", row.names = 1, as.is = TRUE)
+castillayleon = read.csv("DATOS OBJETIVO 2/Castilla y León_genvsdem.csv", row.names = 1, as.is = TRUE)
+cataluña = read.csv("DATOS OBJETIVO 2/Cataluña_genvsdem.csv", row.names = 1, as.is = TRUE)
+comunitatValencia = read.csv("DATOS OBJETIVO 2/Comunitat Valenciana_genvsdem.csv", row.names = 1, as.is = TRUE)
+extremadura = read.csv("DATOS OBJETIVO 2/Extremadura_genvsdem.csv", row.names = 1, as.is = TRUE)
+galicia = read.csv("DATOS OBJETIVO 2/Galicia_genvsdem.csv", row.names = 1, as.is = TRUE)
+madrid = read.csv("DATOS OBJETIVO 2/Madrid, Comunidad de_genvsdem.csv", row.names = 1, as.is = TRUE)
+murcia = read.csv("DATOS OBJETIVO 2/Murcia, Región de_genvsdem.csv", row.names = 1, as.is = TRUE)
+navarra = read.csv("DATOS OBJETIVO 2/Navarra, Comunidad Foral de_genvsdem.csv", row.names = 1, as.is = TRUE)
+paisVasco = read.csv("DATOS OBJETIVO 2/País Vasco_genvsdem.csv", row.names = 1, as.is = TRUE)
+laRioja = read.csv("DATOS OBJETIVO 2/Rioja, La_genvsdem.csv", row.names = 1, as.is = TRUE)
+```
+
+Dado que nuestros datos están organizados por meses, consideramos que sería más conveniente convertirlos en trimestres. Esta decisión se basa en la idea de que la agregación de datos en trimestres facilita la comprensión de las tendencias y patrones , ya que proporciona una vista más general y menos volátil de los datos en comparación con el nivel mensual. Por lo que realizamos una serie de funciones que mostramos a continuación para que se entienda cómo se ha realizado.
+
+```{r,warning=FALSE}
+#Esta función la hemos utilizafo para agrupar las observaciones por cada trimestre, pueste que nuestro dataframe inicial contenía los datos de generación y demanda en meses.
+agrupar_por_trimestre <- function(datos) {
+  # Crear vectores para almacenar los datos agrupados
+  datos_agrupadosG <- numeric(length(datos) / 3)
+  datos_agrupadosD <- numeric(length(datos) / 3)
+  
+  # Iterar sobre cada grupo de tres elementos
+  for (i in 1:(length(datos_agrupadosG))) {
+    # Calcular el índice inicial y final para cada grupo de tres elementos
+    indice_inicial <- (i - 1) * 3 + 1
+    indice_final <- i * 3
+    
+    # Calcular la media de los elementos dentro del grupo y almacenar el resultado en los vectores datos_agrupadosG y datos_agrupadosD
+    datos_agrupadosG[i] <- sum(datos[1, indice_inicial:indice_final])/3
+    datos_agrupadosD[i] <- sum(datos[2, indice_inicial:indice_final])/3
+  }
+  
+  # Crear dataframes individuales para generación y demanda
+  df_generacion <- data.frame(datos_agrupadosG)
+  df_demanda <- data.frame(datos_agrupadosD)
+  
+  # Retornar los dataframes individuales
+  return(list(Generacion = df_generacion, Demanda = df_demanda))
+}
+
+#Utilizada para ponerle el nombre a cada una de las columnas en el formato "añoTtrimestre"
+
+generar_añoTc <- function(año, df) {
+  # Inicializar la lista para almacenar los valores de añoTc en el formato deseado
+  lista <- c()
+  
+  # Iterar sobre las columnas del dataframe
+  for (i in 1:dim(df)[2]) {
+    # Verificar si el índice es un múltiplo de 4 (excepto el primero)
+    if (i %% 4 == 1 & i != 1) {
+      año <- año + 1
+    }
+    # Calcular el trimestre
+    trimestre <- (i %% 4)
+    if (trimestre == 0){
+      trimestre = 4
+    }
+    # Agregar el valor en el formato deseado a la lista
+    lista <- c(lista, paste(año, "T", trimestre, sep = ""))
+  }
+  
+  # Retornar la lista resultante
+  return(lista)
+}
+```
+
+En el siguiente fragmento de código, hemos implementado funciones para procesar los datos de cada archivo de cada comunidad. Estas funciones se encargan de agrupar los datos por generación y por demanda en dataframes separados, aunque en este caso solo nos quedaremos con DEMANDA.
+
+```{r,warning=FALSE,include=FALSE}
+#Realizamos la agrupación por trimestres en cada CCAA
+randalucia = agrupar_por_trimestre(andalucia)
+raragon = agrupar_por_trimestre(aragon)
+rasturias = agrupar_por_trimestre(asturias)
+rbaleares = agrupar_por_trimestre(baleares)
+rcanarias = agrupar_por_trimestre(canarias)
+rcantabria = agrupar_por_trimestre(cantabria)
+rcyl = agrupar_por_trimestre(castillalamancha)
+rcyleon = agrupar_por_trimestre(castillayleon)
+rcat = agrupar_por_trimestre(cataluña)
+rcv = agrupar_por_trimestre(comunitatValencia)
+re = agrupar_por_trimestre(extremadura)
+rg = agrupar_por_trimestre(galicia)
+rm = agrupar_por_trimestre(madrid)
+rmur = agrupar_por_trimestre(murcia)
+rnav = agrupar_por_trimestre(navarra)
+rpv = agrupar_por_trimestre(paisVasco)
+rlR = agrupar_por_trimestre(laRioja)
+
+
+# Selección de la parte de demanda
+demanda_por_region <- list(
+  randalucia$Demanda,
+  raragon$Demanda,
+  rasturias$Demanda,
+  rbaleares$Demanda,
+  rcanarias$Demanda,
+  rcantabria$Demanda,
+  rcyl$Demanda,
+  rcyleon$Demanda,
+  rcat$Demanda,
+  rcv$Demanda,
+  re$Demanda,
+  rg$Demanda,
+  rm$Demanda,
+  rmur$Demanda,
+  rnav$Demanda,
+  rpv$Demanda,
+  rlR$Demanda
+)
+
+# Crear un dataframe con una columna que contiene los dataframes de generación por región
+df_demanda <- data.frame(Demanda = demanda_por_region)
+
+# Imprimir el dataframe
+df_demanda <- t(df_demanda)
+
+row.names(df_demanda) <-  c(
+  "Andalucia", "Aragon", "Principado de Asturias", "Illes Balears", "Canarias",
+  "Cantabria", "Castilla - La Mancha", "Castilla y Leon", "Cataluña",
+  "Comunitat Valenciana", "Extremadura", "Galicia", "Madrid",
+  "Murcia", "Navarra", "Pais Vasco", "La Rioja"
+)
+
+
+col_n  = generar_añoTc(2013,df_demanda)
+colnames(df_demanda) <- col_n
+
+
+```
+
+# **CLUSTERING**
+
+Comenzaremos aplicando la técnica de clustering. Inicialmente, consideramos que usar distancias basadas en la correlación sería apropiado. Sin embargo, después de varios intentos, observamos que la métrica de Silhouette resultaba negativa, lo que indicaba una mala clasificación. Tras reflexionar sobre ello, concluimos que esto podría ser debido a la estacionalidad, ya que las variables podrían estar altamente correlacionadas entre sí.
+
+Por lo tanto, decidimos optar por medidas de distancias, como la distancia euclídea y la de Manhattan, lo que nos permitiría agrupar en función de las diferencias entre los valores. Esto tendría sentido, ya que las CCAA con valores más similares estarían agrupadas entre sí.
+
+```{r,warning = FALSE}
+df_demanda_o <- df_demanda
+df_demanda <- scale(df_demanda, center = TRUE, scale = FALSE)
+```
+
+Primero, calcularemos las matrices de distancias utilizando estas dos métricas diferentes, además de representarlas en un mapa:
+
+```{r,warning=FALSE}
+#DISTANCIA EUCLIDEA
+midist_euclidean <- get_dist(df_demanda, stand = FALSE, method = "euclidean")
+fviz_dist(midist_euclidean, show_labels = TRUE, lab_size = 0.3,
+          gradient = list(low = "#00AFBB", mid = "white", high = "#FC4E07"))
+```
+
+```{r,warning=FALSE}
+#Distancia de Manhattan
+midist <- get_dist(df_demanda, stand = FALSE, method = "manhattan")
+fviz_dist(midist, show_labels = TRUE, lab_size = 0.3,
+          gradient = list(low = "#00AFBB", mid = "white", high = "#FC4E07"))
+```
+
+Después de generar los mapas de calor para las distancias utilizando tanto la distancia euclidiana como la de Manhattan, observamos que ambos muestran 5-6 clústeres distintos, ya que podemos identificar en función de quién lo observe estos números de "cuadrados" de color azul diferenciados. Además, en ambos casos, las observaciones están bastante cerca del centro.
+
+Dado que hemos obtenido resultados bastante similares en la representación de las distancias, hemos decidido utilizar la distancia euclidiana para continuar con nuestro análisis.
+
+Ahora calcularemos el **estadístico de Hopkins,** se trata de un estadístico que nos da información si los datos que tenemos son buenos para realizar agrupamientos.
+
+```{r,warning=FALSE}
+set.seed(100)
+myN = c(4, 8, 12)  # m
+myhopkins = NULL
+myseed = sample(1:1000, 10)
+for (i in myN) {
+  for (j in myseed) {
+    tmp = get_clust_tendency(data = df_demanda, n = i, graph = FALSE, seed = j)
+    myhopkins = c(myhopkins, tmp$hopkins_stat)
+  }
+}
+summary(myhopkins)
+```
+
+El estadístico de Hopkins nos confirma una cierta tendencia de agrupamiento, puesto que ha sido calculado para diferentes valores de m (n en la función) y con diferentes semillas aleatorias y sus valores oscilan entre 0.7501 y 0.9268, es decir, están cercanos a 1.
+
+Ahora realizaremos una serie de modelos para realizar los agrupamientos, y luego realizaremos una validación para elegir el mejor de todos ellos.
+
+## Modelos Jerárquicos
+
+### Método de Ward
+
+```{r,warning=FALSE}
+p1 = fviz_nbclust(x = df_demanda, FUNcluster = hcut, method = "silhouette", 
+                  hc_method = "ward.D2", k.max = 10, verbose = FALSE, 
+                  hc_metric = "euclidean") + labs(title = "Num. optimo clusters")
+p2 = fviz_nbclust(x = df_demanda, FUNcluster = hcut, method = "wss", 
+                  hc_method = "ward.D2", k.max = 10, verbose = FALSE, 
+                  hc_metric = "euclidean") + labs(title = "Num. optimo clusters")
+grid.arrange(p1, p2, nrow = 1)
+```
+
+Después de analizar tanto el gráfico de Silhouette como el de la variabilidad intra-cluster, hemos llegado a la conclusión de que el número óptimo de clústeres es 5. A pesar de que el valor de Silhouette para 5 clústeres es ligeramente inferior al valor máximo obtenido con 2 clústeres, sigue siendo suficientemente alto, indicando una buena separación entre los clústeres. Además, el análisis de la variabilidad intra-cluster muestra una distancia intra-cluster muy baja para este número de clusteres, lo que nos informa de que la distancia entre observaciones dentro del cluster es muy baja. Por otra parte, vemos que para 4 la distancia intra-cluster es muy similar, pero el valor de Silhouette es menor, por lo que acabamos decidiendo 5.
+
+Esta tabla nos sirve para conocer cómo se distribuyen las observaciones en cada clúster, en ella podemos observar que el grupo 2 tiene un mayor número de observaciones que el resto, y el 1,4 y 5 tienen el mismo.
+
+```{r,warning=FALSE}
+clust1 <- hclust(midist_euclidean, method="ward.D2")
+grupos1 <- cutree(clust1, k=5)
+table(grupos1)
+```
+
+A continuación, realizaremos el dendograma que nos ofrece la estructura de los datos y cómo se pueden separar, de una forma más visual y simple:
+
+```{r,warning=FALSE}
+fviz_dend(clust1, k = 5,
+          cex = 0.5, color_labels_by_k = TRUE,
+          rect = TRUE) # dibujar rectángulos
+```
+
+```{r,warning=FALSE}
+fviz_cluster(object = list(data=df_demanda, cluster=grupos1), stand = FALSE,
+             ellipse.type = "convex", geom = "text", show.clust.cent = FALSE,
+             labelsize = 8)  +
+  labs(title = "Modelo jerarquico + Proyeccion PCA",
+       subtitle = "Dist euclidea, Metodo Ward, K=5>") +
+  theme_bw() +
+  theme(legend.position = "bottom")
+
+fviz_cluster(object = list(data=df_demanda, cluster=grupos1), stand = FALSE,
+             ellipse.type = "convex", geom = "text", show.clust.cent = FALSE,
+             labelsize = 8,axes = 3:4)  +
+  labs(title = "Modelo jerarquico + Proyeccion PCA",
+       subtitle = "Dist euclidea, Metodo Ward, K=5>") +
+  theme_bw() +
+  theme(legend.position = "bottom")
+
+medias <- rowMeans(df_demanda_o, na.rm = TRUE)
+media_general <- sum(medias) / length(medias)
+barplot(medias[order(medias, decreasing = TRUE)],las =2, col='blue',main='Media de demanda por CCAA')
+abline(h = media_general, col = "red")
+
+par(pty="s")
+```
+
+Después de crear el gráfico de scores para las dimensiones 1 y 2, podemos observar que los clusters están claramente diferenciados. Específicamente, la dimensión 1 contiene el 99.5% de la variabilidad, lo que indica que es la dimensión principal y que es suficiente para representar los clústeres de manera efectiva. Todo lo que vamos explicando queda reflejado en el barplot que hemos creado, donde la línea roja representa la media de valores de generación.
+
+Par analizar los clústeres iremos de derecha a izquierda en el gráfico, es decir, del número 3(verde) al número 1(rojo), ya que consideramos que seguir un orden a la hora de la explicación nos puede servir de guía de un patrón.
+
+En primer lugar, empezaremos explicando porque se distribuye de esta forma, como hemos utilizado la distancia euclídea las observaciones se agruparán en función de lo lejanas o cercanas que estén entre ellas. En este caso las que tienen un valor de demanda más grande o por encima de la media 0 (las rojas, azules y moradas) se encuentran situadas a la izquierda y las otras que son las que se encuentran por debajo de la media, es decir, la amarilla y la verde se encuentran a la derecha. Esto también lo podemos comparar con el gráfico de barras para las medias de las CCAA, donde podemos apreciar esto que acabamos de describir.
+
+Ahora pasaremos a analizarlos de forma individual:
+
+-   Cluster 1: se trata del clúster de color rojo. En este, podemos observar que las observaciones se encuentran ligeramente separadas entre ellas en la dimensión 1 y, además, se trata de las observaciones con mayor demanda, tal como se puede ver tanto en el dataframe como en el gráfico de medias. Estas observaciones corresponden a Cataluña y Andalucía, dos de las comunidades más grandes y pobladas de España, lo que contribuye a su alta demanda de energía. Esto también se refleja en nuestro dataframe de densidad poblacional. Cataluña tiene un importante sector industrial, mientras que Andalucía presenta un gran consumo energético debido a su extensión geográfica y la necesidad de energía para el turismo y la agricultura.
+
+-   Cluster 4: se trata del clúster de color azul. En este clúster, las observaciones se encuentran prácticamente juntas en la dimensión 1, lo que indica que están bien clasificadas. Además, estas observaciones tienen un valor de demanda bastante alto. Las regiones correspondientes a este clúster son Madrid y Comunidad Valenciana. Madrid, como centro económico de España, requiere una alta demanda de energía para soportar sus actividades comerciales, industriales y residenciales. Por otra parte, Comunidad Valenciana cuenta con una gran presencia industrial y turística, especialmente en los meses de verano, lo que aumenta significativamente su demanda de energía.
+
+-   Cluster 5: se trata del clúster de color morado/rosa. En este clúster, las observaciones se encuentran muy cercanas en la dimensión 1, lo que indica que están bien clasificadas. Estas observaciones tienen un valor de demanda ligeramente superior a la media, por lo que se consideran importantes demandantes de energía. Las regiones correspondientes a este clúster son País Vasco y Galicia. El País Vasco es una región industrial con alta actividad manufacturera y portuaria, lo que genera una considerable demanda de energía. Galicia, aunque más rural, tiene una industria pesquera y agrícola significativa, lo que también requiere una gran cantidad de energía.
+
+-   Cluster 2: se trata del clúster de color amarillo. En este clúster, podemos observar una mayor cantidad de observaciones en comparación con el anterior, todas ellas muy cercanas, lo que indica una buena clasificación. Estas observaciones tienen un valor de demanda inferior a la media, por lo que se consideran demandantes de energía menores. Las regiones correspondientes a este clúster son las Castillas, Canarias, Aragón, Asturias y Murcia. Los motivos de estos valores se deben principalmente a su menor densidad poblacional y a la menor actividad industrial. Aunque Canarias tiene una gran demanda energética debido a su insularidad, esta es menor comparada con otras regiones.
+
+-   Cluster 3: se trata del clúster de color verde. En este clúster, observamos una mayor cantidad de observaciones en comparación con el anterior, todas ellas muy cercanas, lo que indica una buena clasificación. Estas observaciones tienen un valor de demanda inferior a la media, lo que las posiciona como demandantes de energía menores, siendo las menos demandantes de toda España. Las regiones incluidas en este clúster son Cantabria, La Rioja, Navarra, Extremadura y Baleares. Estas regiones se caracterizan por tener menor densidad poblacional y menos actividad industrial en comparación con otras áreas del país. Aunque Cantabria, La Rioja y Navarra están desarrolladas, sus economías son más especializadas y de menor escala. Extremadura, siendo una de las regiones menos pobladas, tiene una demanda de energía relativamente baja. Por su parte, Baleares, a pesar de ser un importante destino turístico, presenta una demanda energética menor debido a su tamaño y la estacionalidad del turismo.
+
+    ### Método de Medias
+
+```{r,warning=FALSE}
+p1 = fviz_nbclust(x = df_demanda, FUNcluster = hcut, method = "silhouette", 
+                  hc_method = "average", k.max = 10, verbose = FALSE, 
+                  hc_metric = "euclidean") + labs(title = "Num. optimo clusters")
+p2 = fviz_nbclust(x = df_demanda, FUNcluster = hcut, method = "wss", 
+                  hc_method = "average", k.max = 10, verbose = FALSE, 
+                  hc_metric = "euclidean") + labs(title = "Num. optimo clusters")
+grid.arrange(p1, p2, nrow = 1)
+```
+
+Después de analizar tanto el gráfico de Silhouette como el de la variabilidad intra-cluster, hemos llegado a la conclusión de que el número óptimo de clústeres es 4. A pesar de que el valor de Silhouette para 4 clústeres es inferior al valor máximo obtenido con 2 clústeres, sigue siendo suficientemente alto, indicando una buena separación entre los clústeres. Además, el análisis de la variabilidad intra-cluster muestra una distancia intra-cluster muy baja para este número de clusteres, lo que nos informa de que la distancia entre observaciones dentro del cluster es muy baja. Por otra parte, vemos que para 5 la distancia intra-cluster es muy similar, pero el valor de Silhouette es menor, por lo que acabamos decidiendo 4.
+
+A continuación, realizaremos el dendograma que nos ofrece la estructura de los datos y cómo se pueden separar, de una forma más visual y simple:
+
+```{r,warning=FALSE}
+clust2 <- hclust(midist_euclidean, method="average")
+grupos2 = cutree(clust2, k = 4)
+fviz_dend(clust2, k = 4,
+          cex = 0.5,
+          color_labels_by_k = TRUE, # colorear etiquetas por grupo
+          rect = TRUE) # dibujar rectángulos
+```
+
+```{r,warning=FALSE}
+fviz_cluster(object = list(data=df_demanda, cluster=grupos2), stand = FALSE,
+             ellipse.type = "convex", geom = "text", show.clust.cent = FALSE,
+             labelsize = 8)  +
+  labs(title = "Modelo jerarquico + Proyeccion PCA",
+       subtitle = "Dist euclidea, Metodo Ward, K=4>") +
+  theme_bw() +
+  theme(legend.position = "bottom")
+
+fviz_cluster(object = list(data=df_demanda, cluster=grupos2), stand = FALSE,
+             ellipse.type = "convex", geom = "text", show.clust.cent = FALSE,
+             labelsize = 8,axes = 3:4)  +
+  labs(title = "Modelo jerarquico + Proyeccion PCA",
+       subtitle = "Dist euclidea, Metodo Ward, K=4>") +
+  theme_bw() +
+  theme(legend.position = "bottom")
+```
+
+Después de crear el gráfico de scores para las dimensiones 1 y 2, podemos observar que los clusters están claramente diferenciados. Específicamente, la dimensión 1 contiene el 99.5% de la variabilidad, lo que indica que es la dimensión principal y que es suficiente para representar los clústeres de manera efectiva. Todo lo que vamos explicando queda reflejado en el barplot que hemos creado, donde la línea roja representa la media de valores de generación.
+
+Par analizar los clústeres iremos de derecha a izquierda en el gráfico, es decir, del número 3(verde) al número 1(rojo), ya que consideramos que seguir un orden a la hora de la explicación nos puede servir de guía de un patrón.
+
+En primer lugar, empezaremos explicando porque se distribuye de esta forma, como hemos utilizado la distancia euclídea las observaciones se agruparán en función de lo lejanas o cercanas que estén entre ellas. En este caso las que tienen un valor de demanda más grande o por encima de la media 0 (las rojas, azules y moradas) se encuentran situadas a la izquierda y las otras que son las que se encuentran por debajo de la media, es decir, la amarilla y la verde se encuentran a la derecha. Esto también lo podemos comparar con el gráfico de barras para las medias de las CCAA, donde podemos apreciar esto que acabamos de describir.
+
+Ahora pasaremos a analizarlos de forma individual:
+
+-   Cluster 1: se trata del clúster de color rojo. En este, podemos observar que las observaciones se encuentran ligeramente separadas entre ellas en la dimensión 1 y, además, se trata de las observaciones con mayor demanda, tal como se puede ver tanto en el dataframe como en el gráfico de medias. Estas observaciones corresponden a Cataluña y Andalucía, dos de las comunidades más grandes y pobladas de España, lo que contribuye a su alta demanda de energía. Esto también se refleja en nuestro dataframe de densidad poblacional. Cataluña tiene un importante sector industrial, mientras que Andalucía presenta un gran consumo energético debido a su extensión geográfica y la necesidad de energía para el turismo y la agricultura.
+
+-   Cluster 3: se trata del clúster de color azul. En este clúster, las observaciones se encuentran prácticamente juntas en la dimensión 1, lo que indica que están bien clasificadas. Además, estas observaciones tienen un valor de demanda bastante alto. Las regiones correspondientes a este clúster son Madrid y Comunidad Valenciana. Madrid, como centro económico de España, requiere una alta demanda de energía para soportar sus actividades comerciales, industriales y residenciales. Por otra parte, Comunidad Valenciana cuenta con una gran presencia industrial y turística, especialmente en los meses de verano, lo que aumenta significativamente su demanda de energía.
+
+-   Cluster 4: se trata del clúster de color morado/rosa. En este clúster, las observaciones se encuentran muy cercanas en la dimensión 1, lo que indica que están bien clasificadas. Estas observaciones tienen un valor de demanda ligeramente superior a la media, por lo que se consideran importantes demandantes de energía. Las regiones correspondientes a este clúster son País Vasco y Galicia. El País Vasco es una región industrial con alta actividad manufacturera y portuaria, lo que genera una considerable demanda de energía. Galicia, aunque más rural, tiene una industria pesquera y agrícola significativa, lo que también requiere una gran cantidad de energía.
+
+-   Cluster 2: se trata del clúster de color amarillo, observamos una mayor cantidad de observaciones en comparación con el clúster anterior, todas ellas muy cercanas entre sí, lo que indica una buena clasificación. Estas observaciones tienen un valor de demanda inferior a la media, considerándose demandantes de energía menores. Las regiones correspondientes a este clúster son las Castillas, Canarias, Aragón, Asturias, Murcia, Cantabria, La Rioja, Navarra, Extremadura y Baleares. Las razones detrás de estos valores se deben principalmente a su menor densidad poblacional y a la menor actividad industrial. Aunque Canarias presenta una gran demanda energética debido a su insularidad, esta es menor comparada con otras regiones. Cantabria, La Rioja y Navarra, aunque desarrolladas, tienen economías más especializadas y de menor escala. Extremadura, siendo una de las regiones menos pobladas, muestra una demanda de energía relativamente baja. Por su parte, Baleares, a pesar de ser un importante destino turístico, tiene una demanda energética menor debido a su tamaño y la estacionalidad del turismo.
+
+## Métodos Partición
+
+### Método de Kmeans
+
+```{r,warning=FALSE}
+p1 = fviz_nbclust(x = df_demanda, FUNcluster = kmeans, method = "silhouette", 
+             k.max = 10, verbose = FALSE) +
+  labs(title = "K-means")
+p2 = fviz_nbclust(x = df_demanda, FUNcluster = kmeans, method = "wss", 
+             k.max = 10, verbose = FALSE) +
+  labs(title = "K-means")
+grid.arrange(p1, p2, nrow = 1)
+```
+
+Después de analizar tanto el gráfico de Silhouette como el de la variabilidad intra-cluster, hemos llegado a la conclusión de que el número óptimo de clústeres es 5. A pesar de que el valor de Silhouette para 5 clústeres es ligeramente inferior al valor máximo obtenido con 2 clústeres, sigue siendo suficientemente alto, indicando una buena separación entre los clústeres. Además, el análisis de la variabilidad intra-cluster muestra una distancia intra-cluster muy baja para este número de clusteres, lo que nos informa de que la distancia entre observaciones dentro del cluster es muy baja. Por otra parte, vemos que para 4 la distancia intra-cluster es muy similar, pero el valor de Silhouette es menor, por lo que acabamos decidiendo 5.
+
+Esta tabla nos sirve para conocer cómo se distribuyen las observaciones en cada clúster, en ella podemos observar que el grupo 2 tiene un mayor número de observaciones que el resto, y el 1,4 y 5 tienen el mismo.
+
+```{r,warning=FALSE}
+set.seed(100)
+clust3 <- kmeans(df_demanda, centers = 5, nstart = 20)
+table(clust3$cluster)
+
+```
+
+```{r,warning=FALSE}
+p1 = fviz_cluster(object = list(data=df_demanda, cluster=clust3$cluster), stand = FALSE,
+             ellipse.type = "convex", geom = "text", show.clust.cent = FALSE,
+             labelsize = 8)  +
+  labs(title = "K-MEDIAS + Proyeccion PCA",
+       subtitle = "Dist euclidea, K=5") +
+  theme_bw() +
+  theme(legend.position = "bottom")
+p2 = fviz_cluster(object = list(data=df_demanda, cluster=clust3$cluster), stand = FALSE,
+             ellipse.type = "convex", geom = "text", show.clust.cent = FALSE,
+             labelsize = 8, axes = 3:4)  +
+  labs(title = "K-MEDIAS + Proyeccion PCA",
+       subtitle = "Dist euclidea, K=5") +
+  theme_bw() +
+  theme(legend.position = "bottom")
+grid.arrange(p1, p2, nrow = 1)
+```
+
+### Método de kmedoides
+
+```{r,warning=FALSE}
+p1 = fviz_nbclust(x = df_demanda, FUNcluster = pam, method = "silhouette", 
+             k.max = 10, verbose = FALSE) +
+  labs(title = "Numero optimo de clusters")
+p2 = fviz_nbclust(x = df_demanda, FUNcluster = pam, method = "wss", 
+             k.max = 10, verbose = FALSE) +
+  labs(title = "Numero optimo de clusters")
+grid.arrange(p1, p2, nrow = 1)
+```
+
+Después de analizar tanto el gráfico de Silhouette como el de la variabilidad intra-cluster, hemos llegado a la conclusión de que el número óptimo de clústeres es 5. A pesar de que el valor de Silhouette para 5 clústeres es inferior al valor máximo obtenido con 2 clústeres, sigue siendo suficientemente alto, indicando una buena separación entre los clústeres. Además, el análisis de la variabilidad intra-cluster muestra una distancia intra-cluster muy baja para este número de clusteres, lo que nos informa de que la distancia entre observaciones dentro del cluster es muy baja. Por otra parte, vemos que para 4 la distancia intra-cluster es muy similar, pero el valor de Silhouette es menor, por lo que acabamos decidiendo 5.
+
+Esta tabla nos sirve para conocer cómo se distribuyen las observaciones en cada clúster, en ella podemos observar que el grupo 2 tiene un mayor número de observaciones que el resto, y el 1,4 y 5 tienen el mismo.
+
+```{r,warning=FALSE}
+clust4 <- pam(df_demanda, k = 5)
+table(clust4$clustering)
+```
+
+```{r,warning=FALSE}
+p1 = fviz_cluster(object = list(data=df_demanda, cluster=clust4$clustering), stand = FALSE,
+             ellipse.type = "convex", geom = "text", show.clust.cent = FALSE,
+             labelsize = 8)  +
+  labs(title = "K-MEDOIDES + Proyeccion PCA",
+       subtitle = "Dist euclidea, K=5") +
+  theme_bw() +
+  theme(legend.position = "bottom")
+p2 = fviz_cluster(object = list(data=df_demanda, cluster=clust4$clustering), stand = FALSE,
+             ellipse.type = "convex", geom = "text", show.clust.cent = FALSE,
+             labelsize = 8, axes = 3:4)  +
+  labs(title = "K-MEDOIDES + Proyeccion PCA",
+       subtitle = "Dist euclidea, K=5") +
+  theme_bw() +
+  theme(legend.position = "bottom")
+grid.arrange(p1, p2, nrow = 1)
+
+
+```
+
+Después de crear el gráfico de scores para las dimensiones 1 y 2, podemos observar que los clusters están claramente diferenciados. Específicamente, la dimensión 1 contiene el 99.5% de la variabilidad, lo que indica que es la dimensión principal y que es suficiente para representar los clústeres de manera efectiva. Todo lo que vamos explicando queda reflejado en el barplot que hemos creado, donde la línea roja representa la media de valores de generación.
+
+Par analizar los clústeres iremos de derecha a izquierda en el gráfico, es decir, del número 3(verde) al número 1(rojo), ya que consideramos que seguir un orden a la hora de la explicación nos puede servir de guía de un patrón.
+
+En primer lugar, empezaremos explicando porque se distribuye de esta forma, como hemos utilizado la distancia euclídea las observaciones se agruparán en función de lo lejanas o cercanas que estén entre ellas. En este caso las que tienen un valor de demanda más grande o por encima de la media 0 (las rojas, azules y moradas) se encuentran situadas a la izquierda y las otras que son las que se encuentran por debajo de la media, es decir, la amarilla y la verde se encuentran a la derecha. Esto también lo podemos comparar con el gráfico de barras para las medias de las CCAA, donde podemos apreciar esto que acabamos de describir.
+
+Ahora pasaremos a analizarlos de forma individual:
+
+-   Cluster 1: se trata del clúster de color rojo. En este, podemos observar que las observaciones se encuentran ligeramente separadas entre ellas en la dimensión 1 y, además, se trata de las observaciones con mayor demanda, tal como se puede ver tanto en el dataframe como en el gráfico de medias. Estas observaciones corresponden a Cataluña y Andalucía, dos de las comunidades más grandes y pobladas de España, lo que contribuye a su alta demanda de energía. Esto también se refleja en nuestro dataframe de densidad poblacional. Cataluña tiene un importante sector industrial, mientras que Andalucía presenta un gran consumo energético debido a su extensión geográfica y la necesidad de energía para el turismo y la agricultura.
+
+-   Cluster 4: se trata del clúster de color azul. En este clúster, las observaciones se encuentran prácticamente juntas en la dimensión 1, lo que indica que están bien clasificadas. Además, estas observaciones tienen un valor de demanda bastante alto. Las regiones correspondientes a este clúster son Madrid y Comunidad Valenciana. Madrid, como centro económico de España, requiere una alta demanda de energía para soportar sus actividades comerciales, industriales y residenciales. Por otra parte, Comunidad Valenciana cuenta con una gran presencia industrial y turística, especialmente en los meses de verano, lo que aumenta significativamente su demanda de energía.
+
+-   Cluster 5: se trata del clúster de color morado/rosa. En este clúster, las observaciones se encuentran muy cercanas en la dimensión 1, lo que indica que están bien clasificadas. Estas observaciones tienen un valor de demanda ligeramente superior a la media, por lo que se consideran importantes demandantes de energía. Las regiones correspondientes a este clúster son País Vasco y Galicia. El País Vasco es una región industrial con alta actividad manufacturera y portuaria, lo que genera una considerable demanda de energía. Galicia, aunque más rural, tiene una industria pesquera y agrícola significativa, lo que también requiere una gran cantidad de energía.
+
+-   Cluster 2: se trata del clúster de color amarillo. En este clúster, podemos observar una mayor cantidad de observaciones en comparación con el anterior, todas ellas muy cercanas, lo que indica una buena clasificación. Estas observaciones tienen un valor de demanda inferior a la media, por lo que se consideran demandantes de energía menores. Las regiones correspondientes a este clúster son las Castillas, Canarias, Aragón, Asturias y Murcia. Los motivos de estos valores se deben principalmente a su menor densidad poblacional y a la menor actividad industrial. Aunque Canarias tiene una gran demanda energética debido a su insularidad, esta es menor comparada con otras regiones.
+
+-   Cluster 3: se trata del clúster de color verde. En este clúster, observamos una mayor cantidad de observaciones en comparación con el anterior, todas ellas muy cercanas, lo que indica una buena clasificación. Estas observaciones tienen un valor de demanda inferior a la media, lo que las posiciona como demandantes de energía menores, siendo las menos demandantes de toda España. Las regiones incluidas en este clúster son Cantabria, La Rioja, Navarra, Extremadura y Baleares. Estas regiones se caracterizan por tener menor densidad poblacional y menos actividad industrial en comparación con otras áreas del país. Aunque Cantabria, La Rioja y Navarra están desarrolladas, sus economías son más especializadas y de menor escala. Extremadura, siendo una de las regiones menos pobladas, tiene una demanda de energía relativamente baja. Por su parte, Baleares, a pesar de ser un importante destino turístico, presenta una demanda energética menor debido a su tamaño y la estacionalidad del turismo.
+
+```{r,warning=FALSE}
+# Establecer el diseño de la grilla de gráficos
+par(mfrow = c(1,3))
+
+# Graficar coeficientes de silueta para Ward
+plot(silhouette(grupos1, midist_euclidean), col = rainbow(5), border = NA, main = "WARD")
+
+# Graficar coeficientes de silueta para K-MEDIAS
+plot(silhouette(clust3$cluster, midist_euclidean), col = rainbow(5), border = NA, main = "K-MEDIAS")
+
+# Graficar coeficientes de silueta para K-MEDOIDES
+plot(silhouette(clust4$clustering, midist_euclidean), col = rainbow(5), border = NA, main = "K-MEDOIDES")
+
+```
+
+Tras realizar la selección del modelo decidimos quedarnos con el método de k-medoides aunque k-medias tenga el mismo valor medio de Silhouette, debido a que k-medoides es menos sensible a los valores atípicos, ya que utilizan puntos reales del conjunto de datos como medodes, por lo que obtendremos clusters más robustos y estables.
+
+## Selección y validación de modelos
+
+```{r,warning=FALSE}
+misclust = factor(clust3$cluster)
+miPCA = PCA(df_demanda, scale.unit = FALSE, graph = FALSE)
+eig.val = get_eigenvalue(miPCA)
+Vmedia = 100 * (1/nrow(eig.val))
+fviz_eig(miPCA, addlabels = TRUE) +
+  geom_hline(yintercept=Vmedia, linetype=2, color="red")
+```
+
+Tras realizar la selección del modelo decidimos quedarnos con el método de k-medoides aunque k-medias tenga el mismo valor medio de Silhouette, debido a que k-medoides es menos sensible a los valores atípicos, ya que utilizan puntos reales del conjunto de datos como medodes, por lo que obtendremos clusters más robustos y estables.
+
+## PCA comprobación
+
+A continuación, realizaremos la representación PCA para conocer mejor por qué se distribuyen de tal forma las dimensiones
+
+```{r,warning=FALSE}
+p1 = fviz_pca_ind(miPCA, geom = "point", habillage = misclust, addEllipses = FALSE)
+p2 = fviz_pca_var(miPCA)
+grid.arrange(p1, p2, nrow = 1)
+```
+
+Es interesante notar cómo todas las variables están representadas predominantemente en la dimensión 1, lo que sugiere que esta dimensión captura la mayor parte de la variabilidad en los datos. Aunque algunas variables pueden tener cierta inclinación en la dimensión 2, su contribución a la variabilidad total es mucho menor, como lo indica el 3.1% de variabilidad explicada por la dimensión 2.
+
+Esta observación resalta la importancia de la dimensión 1 en la representación de los datos y sugiere que la mayoría de las diferencias entre las observaciones están capturadas por esta dimensión principal.
+
+```{r,warning=FALSE}
+# Calcular medias por clúster
+mediasCluster <- aggregate(df_demanda, by = list("cluster" = misclust), mean)[,-1]
+
+# Establecer nombres de fila
+rownames(mediasCluster) <- paste0("c", seq_len(nrow(mediasCluster)))
+
+# Mostrar los resultados
+kable(t(round(mediasCluster, 2)))
+
+```
+
+```{r,warning=FALSE}
+matplot(t(mediasCluster), type = "l", col = rainbow(5), ylab = "", xlab = "", lwd = 2,
+        lty = 1, main = "Perfil medio de los clusters", xaxt = "n")
+axis(side = 1, at = 1:ncol(df_demanda), labels = colnames(df_demanda), las = 2)
+legend("topleft", as.character(1:5), col = rainbow(5), lwd = 2, ncol = 3, bty = "n")
+```
+
+El gráfico muestra el perfil medio de los clústeres en términos de demanda energética desde el primer trimestre de 2013 hasta el tercer trimestre de 2023. Los clústeres están representados por diferentes colores y líneas, cada uno reflejando un patrón de demanda específico.
+
+1.  **Clúster 1 (Línea Morada):** Este clúster tiene la mayor demanda energética, con valores que se mantienen altos a lo largo del tiempo. La línea muestra fluctuaciones significativas, lo que indica variaciones estacionales o cambios en la actividad económica que afectan la demanda de energía.
+
+2.  **Clúster 2 (Línea Roja):** Este clúster presenta una demanda energética considerablemente menor que el clúster 1, pero estable y consistente en el tiempo. Las variaciones son menores comparadas con el clúster 1, lo que sugiere una demanda más predecible y constante.
+
+3.  **Clúster 3 (Línea Amarilla):** Representa un nivel de demanda aún más bajo que el clúster 2. Las observaciones son bastante consistentes a lo largo del tiempo, lo que indica un patrón de consumo de energía regular y posiblemente asociado a regiones con menor actividad industrial y densidad poblacional, como se mencionó previamente en la descripción de las regiones del clúster amarillo.
+
+4.  **Clúster 4 (Línea Azul):** Este clúster tiene la menor demanda energética de todos los clústeres representados en el gráfico. La línea azul muestra una estabilidad notable con pocas fluctuaciones, lo que podría corresponder a regiones con muy baja actividad económica o densidad poblacional.
+
+5.  **Clúster 5 (Línea Verde):** Aunque no fue detallado anteriormente, la línea verde representa un perfil de demanda energético que se sitúa entre los valores del clúster 3 y el clúster 4. Esta línea muestra más variabilidad que la línea azul pero menos que la línea amarilla, sugiriendo una combinación de regiones con diferentes niveles de consumo energético.
+
+## Representación Mapa de España
+
+Ahora lo que vamos a hacer es una representación del mejor método en un mapa de España, donde aparecerán las diferentes CCAA coloreadas en función del cluster al que pertenecen. De este modo será más visual y entendible cada una de las conclusiones que hemos ido extrayendo en los anteriores apartados.
+
+```{r,message=FALSE,warning=FALSE}
+datos = as.data.frame(clust4$clustering)
+colnames(datos)[colnames(datos) == "clust4$clustering"] <- "grupos1"
+  ccaa2 = c("Andalucía", "Aragón", "Asturias, Principado de", "Balears, Illes", "Canarias", "Cantabria", "Castilla - La Mancha", "Castilla y León", "Cataluña", "Comunitat Valenciana", "Extremadura", "Galicia", "Madrid, Comunidad de", "Murcia, Región de", "Navarra, Comunidad Foral de", "País Vasco", "Rioja, La")
+
+rownames(datos)<- NULL
+datos <- cbind(datos,ccaa2)
+```
+
+```{r,warning=FALSE}
+
+
+#Qué diferencias hay entre cada 
+#Extreaemos la información necesaria para poder hacer el mapa de España con figuras
+#gracias a la función esp_get_ccaa() de la librería mapSpain. En el dataframe obtenido
+#tenemos la columna geometry que es con la que plotearemos la geografía española
+ccaa <- esp_get_ccaa()
+ccaa <- ccaa[,c("ine.ccaa.name", "geometry")]
+#Como también incluye Canarias, sacamos una cajita que las contenga 
+#para que quede mejor el gráfico
+can_box <- esp_get_can_box()
+
+ceuta_melilla = data.frame(
+  grupos1 = c(NA,NA),
+  ccaa2 = c("Ceuta", "Melilla")
+)
+
+datos <- rbind(datos, ceuta_melilla)
+
+ui <- fluidPage(
+  titlePanel("Clusters para demanda por ccaa"),
+    mainPanel(
+      # Agregar el gráfico del mapa
+      plotlyOutput("map_plot")
+    )
+  )
+
+
+server <- function(input, output) {
+  output$map_plot <- renderPlotly({
+    ccaa <- merge(ccaa, datos, by.x = "ine.ccaa.name", by.y = "ccaa2", all.x = TRUE)
+    # Crear el mapa de España con Plotly
+    p <- ggplot(ccaa) +
+      geom_sf(aes(fill = factor(grupos1)), color = NA) +  # Eliminar las líneas de los polígonos
+      scale_fill_manual(values = c("1" = "#4E79A7", "2" = "#6EB5A2", "3" = "#A18F7E", "4" = "#84A390","5"="#D6B6C7"),name="Clusters") +  # Definir colores manuales
+      geom_sf_text(aes(label = ine.ccaa.name), size = 2, color = "black") +
+      geom_sf(data = can_box, inherit.aes = FALSE) +
+      theme_void() +  # Eliminar grados y otros elementos de los ejes
+      theme(legend.position = "bottom")  # Opcional: Colocar la leyenda en la parte inferior
+    
+    # Convertir el objeto ggplot a un gráfico interactivo de Plotly
+    ggplotly(p)
+  })
+}
+shinyApp(ui = ui, server = server)
+```

@@ -1,0 +1,1590 @@
+<!DOCTYPE html>
+<!-- saved from url=(0046)http://127.0.0.1:6506/demanda%20clustering.Rmd -->
+<html class=""><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  
+  <script type="application/shiny-singletons"></script>
+  <script type="application/html-dependencies">jquery[3.6.0];shiny-css[1.8.1];shiny-javascript[1.8.1]</script>
+<script src="./CLUSTERING DEMANDA (OBJETIVO 2)_files/jquery.min.js.descarga"></script>
+<link href="./CLUSTERING DEMANDA (OBJETIVO 2)_files/shiny.min.css" rel="stylesheet">
+<script src="./CLUSTERING DEMANDA (OBJETIVO 2)_files/shiny.min.js.descarga"></script>  <script src="./CLUSTERING DEMANDA (OBJETIVO 2)_files/rmd_loader.js.descarga"></script>
+  <link href="./CLUSTERING DEMANDA (OBJETIVO 2)_files/rmd_loader.css" rel="stylesheet">
+<script src="./CLUSTERING DEMANDA (OBJETIVO 2)_files/header-attrs.js.descarga"></script><meta name="viewport" content="width=device-width, initial-scale=1"><link href="./CLUSTERING DEMANDA (OBJETIVO 2)_files/bootstrap.min.css" rel="stylesheet" type="text/css"><script src="./CLUSTERING DEMANDA (OBJETIVO 2)_files/bootstrap.min.js.descarga"></script><script src="./CLUSTERING DEMANDA (OBJETIVO 2)_files/html5shiv.min.js.descarga"></script><script src="./CLUSTERING DEMANDA (OBJETIVO 2)_files/respond.min.js.descarga"></script><style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style><script src="./CLUSTERING DEMANDA (OBJETIVO 2)_files/jquery-ui.min.js.descarga"></script><link href="./CLUSTERING DEMANDA (OBJETIVO 2)_files/jquery.tocify.css" rel="stylesheet" type="text/css"><script src="./CLUSTERING DEMANDA (OBJETIVO 2)_files/jquery.tocify.js.descarga"></script><script src="./CLUSTERING DEMANDA (OBJETIVO 2)_files/tabsets.js.descarga"></script><link href="./CLUSTERING DEMANDA (OBJETIVO 2)_files/default.css" rel="stylesheet" type="text/css"><script src="./CLUSTERING DEMANDA (OBJETIVO 2)_files/highlight.js.descarga"></script><link href="./CLUSTERING DEMANDA (OBJETIVO 2)_files/rmd_perf.css" rel="stylesheet" type="text/css"><script src="./CLUSTERING DEMANDA (OBJETIVO 2)_files/rmd_perf.js.descarga"></script><meta name="rstudio_origin" content="127.0.0.1:33597"><script src="./CLUSTERING DEMANDA (OBJETIVO 2)_files/rsiframe.js.descarga"></script>
+
+
+<meta name="generator" content="pandoc">
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE">
+
+
+<meta name="author" content="Aleixandre">
+
+<meta name="date" content="2024-05-28">
+
+<title>CLUSTERING DEMANDA (OBJETIVO 2)</title>
+
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+
+<style type="text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "\e258";
+  font-family: 'Glyphicons Halflings';
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+<style type="text/css">
+
+#section-TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#section-TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+.tocify-subheader {
+  display: inline;
+}
+.tocify-subheader .tocify-item {
+  font-size: 0.95em;
+}
+
+</style>
+
+
+
+<script type="text/javascript" src="./CLUSTERING DEMANDA (OBJETIVO 2)_files/MathJax.js.descarga"></script><style type="text/css">.MathJax_Hover_Frame {border-radius: .25em; -webkit-border-radius: .25em; -moz-border-radius: .25em; -khtml-border-radius: .25em; box-shadow: 0px 0px 15px #83A; -webkit-box-shadow: 0px 0px 15px #83A; -moz-box-shadow: 0px 0px 15px #83A; -khtml-box-shadow: 0px 0px 15px #83A; border: 1px solid #A6D ! important; display: inline-block; position: absolute}
+.MathJax_Menu_Button .MathJax_Hover_Arrow {position: absolute; cursor: pointer; display: inline-block; border: 2px solid #AAA; border-radius: 4px; -webkit-border-radius: 4px; -moz-border-radius: 4px; -khtml-border-radius: 4px; font-family: 'Courier New',Courier; font-size: 9px; color: #F0F0F0}
+.MathJax_Menu_Button .MathJax_Hover_Arrow span {display: block; background-color: #AAA; border: 1px solid; border-radius: 3px; line-height: 0; padding: 4px}
+.MathJax_Hover_Arrow:hover {color: white!important; border: 2px solid #CCC!important}
+.MathJax_Hover_Arrow:hover span {background-color: #CCC!important}
+</style><style type="text/css">#MathJax_About {position: fixed; left: 50%; width: auto; text-align: center; border: 3px outset; padding: 1em 2em; background-color: #DDDDDD; color: black; cursor: default; font-family: message-box; font-size: 120%; font-style: normal; text-indent: 0; text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal; word-wrap: normal; white-space: nowrap; float: none; z-index: 201; border-radius: 15px; -webkit-border-radius: 15px; -moz-border-radius: 15px; -khtml-border-radius: 15px; box-shadow: 0px 10px 20px #808080; -webkit-box-shadow: 0px 10px 20px #808080; -moz-box-shadow: 0px 10px 20px #808080; -khtml-box-shadow: 0px 10px 20px #808080; filter: progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color='gray', Positive='true')}
+#MathJax_About.MathJax_MousePost {outline: none}
+.MathJax_Menu {position: absolute; background-color: white; color: black; width: auto; padding: 2px; border: 1px solid #CCCCCC; margin: 0; cursor: default; font: menu; text-align: left; text-indent: 0; text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal; word-wrap: normal; white-space: nowrap; float: none; z-index: 201; box-shadow: 0px 10px 20px #808080; -webkit-box-shadow: 0px 10px 20px #808080; -moz-box-shadow: 0px 10px 20px #808080; -khtml-box-shadow: 0px 10px 20px #808080; filter: progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color='gray', Positive='true')}
+.MathJax_MenuItem {padding: 2px 2em; background: transparent}
+.MathJax_MenuArrow {position: absolute; right: .5em; padding-top: .25em; color: #666666; font-size: .75em}
+.MathJax_MenuActive .MathJax_MenuArrow {color: white}
+.MathJax_MenuArrow.RTL {left: .5em; right: auto}
+.MathJax_MenuCheck {position: absolute; left: .7em}
+.MathJax_MenuCheck.RTL {right: .7em; left: auto}
+.MathJax_MenuRadioCheck {position: absolute; left: 1em}
+.MathJax_MenuRadioCheck.RTL {right: 1em; left: auto}
+.MathJax_MenuLabel {padding: 2px 2em 4px 1.33em; font-style: italic}
+.MathJax_MenuRule {border-top: 1px solid #CCCCCC; margin: 4px 1px 0px}
+.MathJax_MenuDisabled {color: GrayText}
+.MathJax_MenuActive {background-color: Highlight; color: HighlightText}
+.MathJax_MenuDisabled:focus, .MathJax_MenuLabel:focus {background-color: #E8E8E8}
+.MathJax_ContextMenu:focus {outline: none}
+.MathJax_ContextMenu .MathJax_MenuItem:focus {outline: none}
+#MathJax_AboutClose {top: .2em; right: .2em}
+.MathJax_Menu .MathJax_MenuClose {top: -10px; left: -10px}
+.MathJax_MenuClose {position: absolute; cursor: pointer; display: inline-block; border: 2px solid #AAA; border-radius: 18px; -webkit-border-radius: 18px; -moz-border-radius: 18px; -khtml-border-radius: 18px; font-family: 'Courier New',Courier; font-size: 24px; color: #F0F0F0}
+.MathJax_MenuClose span {display: block; background-color: #AAA; border: 1.5px solid; border-radius: 18px; -webkit-border-radius: 18px; -moz-border-radius: 18px; -khtml-border-radius: 18px; line-height: 0; padding: 8px 0 6px}
+.MathJax_MenuClose:hover {color: white!important; border: 2px solid #CCC!important}
+.MathJax_MenuClose:hover span {background-color: #CCC!important}
+.MathJax_MenuClose:hover:focus {outline: none}
+</style><style type="text/css">.MathJax_Preview .MJXf-math {color: inherit!important}
+</style><style type="text/css">.MJX_Assistive_MathML {position: absolute!important; top: 0; left: 0; clip: rect(1px, 1px, 1px, 1px); padding: 1px 0 0 0!important; border: 0!important; height: 1px!important; width: 1px!important; overflow: hidden!important; display: block!important; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none}
+.MJX_Assistive_MathML.MJX_Assistive_MathML_Block {width: 100%!important}
+</style><style type="text/css">#MathJax_Zoom {position: absolute; background-color: #F0F0F0; overflow: auto; display: block; z-index: 301; padding: .5em; border: 1px solid black; margin: 0; font-weight: normal; font-style: normal; text-align: left; text-indent: 0; text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal; word-wrap: normal; white-space: nowrap; float: none; -webkit-box-sizing: content-box; -moz-box-sizing: content-box; box-sizing: content-box; box-shadow: 5px 5px 15px #AAAAAA; -webkit-box-shadow: 5px 5px 15px #AAAAAA; -moz-box-shadow: 5px 5px 15px #AAAAAA; -khtml-box-shadow: 5px 5px 15px #AAAAAA; filter: progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color='gray', Positive='true')}
+#MathJax_ZoomOverlay {position: absolute; left: 0; top: 0; z-index: 300; display: inline-block; width: 100%; height: 100%; border: 0; padding: 0; margin: 0; background-color: white; opacity: 0; filter: alpha(opacity=0)}
+#MathJax_ZoomFrame {position: relative; display: inline-block; height: 0; width: 0}
+#MathJax_ZoomEventTrap {position: absolute; left: 0; top: 0; z-index: 302; display: inline-block; border: 0; padding: 0; margin: 0; background-color: white; opacity: 0; filter: alpha(opacity=0)}
+</style><style type="text/css">.MathJax_Preview {color: #888}
+#MathJax_Message {position: fixed; left: 1em; bottom: 1.5em; background-color: #E6E6E6; border: 1px solid #959595; margin: 0px; padding: 2px 8px; z-index: 102; color: black; font-size: 80%; width: auto; white-space: nowrap}
+#MathJax_MSIE_Frame {position: absolute; top: 0; left: 0; width: 0px; z-index: 101; border: 0px; margin: 0px; padding: 0px}
+.MathJax_Error {color: #CC0000; font-style: italic}
+</style><style type="text/css">.MJXp-script {font-size: .8em}
+.MJXp-right {-webkit-transform-origin: right; -moz-transform-origin: right; -ms-transform-origin: right; -o-transform-origin: right; transform-origin: right}
+.MJXp-bold {font-weight: bold}
+.MJXp-italic {font-style: italic}
+.MJXp-scr {font-family: MathJax_Script,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-frak {font-family: MathJax_Fraktur,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-sf {font-family: MathJax_SansSerif,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-cal {font-family: MathJax_Caligraphic,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-mono {font-family: MathJax_Typewriter,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-largeop {font-size: 150%}
+.MJXp-largeop.MJXp-int {vertical-align: -.2em}
+.MJXp-math {display: inline-block; line-height: 1.2; text-indent: 0; font-family: 'Times New Roman',Times,STIXGeneral,serif; white-space: nowrap; border-collapse: collapse}
+.MJXp-display {display: block; text-align: center; margin: 1em 0}
+.MJXp-math span {display: inline-block}
+.MJXp-box {display: block!important; text-align: center}
+.MJXp-box:after {content: " "}
+.MJXp-rule {display: block!important; margin-top: .1em}
+.MJXp-char {display: block!important}
+.MJXp-mo {margin: 0 .15em}
+.MJXp-mfrac {margin: 0 .125em; vertical-align: .25em}
+.MJXp-denom {display: inline-table!important; width: 100%}
+.MJXp-denom > * {display: table-row!important}
+.MJXp-surd {vertical-align: top}
+.MJXp-surd > * {display: block!important}
+.MJXp-script-box > *  {display: table!important; height: 50%}
+.MJXp-script-box > * > * {display: table-cell!important; vertical-align: top}
+.MJXp-script-box > *:last-child > * {vertical-align: bottom}
+.MJXp-script-box > * > * > * {display: block!important}
+.MJXp-mphantom {visibility: hidden}
+.MJXp-munderover, .MJXp-munder {display: inline-table!important}
+.MJXp-over {display: inline-block!important; text-align: center}
+.MJXp-over > * {display: block!important}
+.MJXp-munderover > *, .MJXp-munder > * {display: table-row!important}
+.MJXp-mtable {vertical-align: .25em; margin: 0 .125em}
+.MJXp-mtable > * {display: inline-table!important; vertical-align: middle}
+.MJXp-mtr {display: table-row!important}
+.MJXp-mtd {display: table-cell!important; text-align: center; padding: .5em 0 0 .5em}
+.MJXp-mtr > .MJXp-mtd:first-child {padding-left: 0}
+.MJXp-mtr:first-child > .MJXp-mtd {padding-top: 0}
+.MJXp-mlabeledtr {display: table-row!important}
+.MJXp-mlabeledtr > .MJXp-mtd:first-child {padding-left: 0}
+.MJXp-mlabeledtr:first-child > .MJXp-mtd {padding-top: 0}
+.MJXp-merror {background-color: #FFFF88; color: #CC0000; border: 1px solid #CC0000; padding: 1px 3px; font-style: normal; font-size: 90%}
+.MJXp-scale0 {-webkit-transform: scaleX(.0); -moz-transform: scaleX(.0); -ms-transform: scaleX(.0); -o-transform: scaleX(.0); transform: scaleX(.0)}
+.MJXp-scale1 {-webkit-transform: scaleX(.1); -moz-transform: scaleX(.1); -ms-transform: scaleX(.1); -o-transform: scaleX(.1); transform: scaleX(.1)}
+.MJXp-scale2 {-webkit-transform: scaleX(.2); -moz-transform: scaleX(.2); -ms-transform: scaleX(.2); -o-transform: scaleX(.2); transform: scaleX(.2)}
+.MJXp-scale3 {-webkit-transform: scaleX(.3); -moz-transform: scaleX(.3); -ms-transform: scaleX(.3); -o-transform: scaleX(.3); transform: scaleX(.3)}
+.MJXp-scale4 {-webkit-transform: scaleX(.4); -moz-transform: scaleX(.4); -ms-transform: scaleX(.4); -o-transform: scaleX(.4); transform: scaleX(.4)}
+.MJXp-scale5 {-webkit-transform: scaleX(.5); -moz-transform: scaleX(.5); -ms-transform: scaleX(.5); -o-transform: scaleX(.5); transform: scaleX(.5)}
+.MJXp-scale6 {-webkit-transform: scaleX(.6); -moz-transform: scaleX(.6); -ms-transform: scaleX(.6); -o-transform: scaleX(.6); transform: scaleX(.6)}
+.MJXp-scale7 {-webkit-transform: scaleX(.7); -moz-transform: scaleX(.7); -ms-transform: scaleX(.7); -o-transform: scaleX(.7); transform: scaleX(.7)}
+.MJXp-scale8 {-webkit-transform: scaleX(.8); -moz-transform: scaleX(.8); -ms-transform: scaleX(.8); -o-transform: scaleX(.8); transform: scaleX(.8)}
+.MJXp-scale9 {-webkit-transform: scaleX(.9); -moz-transform: scaleX(.9); -ms-transform: scaleX(.9); -o-transform: scaleX(.9); transform: scaleX(.9)}
+.MathJax_PHTML .noError {vertical-align: ; font-size: 90%; text-align: left; color: black; padding: 1px 3px; border: 1px solid}
+</style></head>
+<body><div id="MathJax_Message" style="display: none;"></div>
+  <div>
+    <div class="shiny-panel-conditional" data-display-if="!output.__reactivedoc__" data-ns-prefix="" style="display: none;">
+      <div id="rmd_loader_wrapper">
+        <div id="rmd_loader" style="">
+          <p>Please wait...</p>
+          <img src="./CLUSTERING DEMANDA (OBJETIVO 2)_files/rmd_loader.gif">
+        </div>
+      </div>
+    </div>
+    <div id="__reactivedoc__" class="shiny-html-output shiny-bound-output" aria-live="polite">
+
+
+
+
+
+
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="section-TOC" class="tocify">
+<ul id="tocify-header1" class="tocify-header list-group"><li class="tocify-item list-group-item active" data-unique="LIBRERÍAS"><strong>LIBRERÍAS</strong></li></ul><ul id="tocify-header2" class="tocify-header list-group"><li class="tocify-item list-group-item" data-unique="PREPARACIÓN_BBDD"><strong>PREPARACIÓN BBDD</strong></li></ul><ul id="tocify-header3" class="tocify-header list-group"><li class="tocify-item list-group-item" data-unique="CLUSTERING"><strong>CLUSTERING</strong></li><ul class="tocify-subheader list-group" data-tag="2"><li class="tocify-item list-group-item" data-unique="Modelos_Jerárquicos">Modelos Jerárquicos</li><li class="tocify-item list-group-item" data-unique="Métodos_Partición">Métodos Partición</li><li class="tocify-item list-group-item" data-unique="Selección_y_validación_de_modelos">Selección y validación de modelos</li><li class="tocify-item list-group-item" data-unique="PCA_comprobación">PCA comprobación</li><li class="tocify-item list-group-item" data-unique="Representación_Mapa_de_España">Representación Mapa de España</li></ul></ul></div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div id="section-header">
+
+
+
+<h1 class="title toc-ignore">CLUSTERING DEMANDA (OBJETIVO 2)</h1>
+<h4 class="author">Aleixandre</h4>
+<h4 class="date">2024-05-28</h4>
+
+</div>
+
+
+<p>En este documento, exploraremos la aplicación de técnicas de
+clustering para analizar los datos de demanda de energía, dichos datos
+se encuentran recabados en <strong>df_demanda</strong>, donde se muestra
+la media de mwh por dia durante ese trimestre para cada comunidad
+autónoma. El objetivo es agrupar las diferentes comunidades autónomas en
+función de los valores obtenidos y las distancias entre estos. Al
+emplear estas técnicas, buscamos identificar patrones y relaciones entre
+las ccaa, lo que permitirá una mejor comprensión. A lo largo del
+estudio, examinaremos diversas métricas y algoritmos de clustering,
+evaluando su efectividad para nuestro conjunto de datos específico, así
+como estableceremos relaciones con el resto de objetivos del grupo para
+poder justificar por qué se establecen estos patrones.</p>
+<div id="section-librerías" class="section level1">
+<div name="LIBRERÍAS" data-unique="LIBRERÍAS"></div><h1><strong>LIBRERÍAS</strong></h1>
+<pre class="r"><code class="hljs"><span class="hljs-keyword">library</span>(ggplot2)
+<span class="hljs-keyword">library</span>(readxl)
+<span class="hljs-keyword">library</span>(shiny)
+<span class="hljs-keyword">library</span>(leaflet)
+<span class="hljs-keyword">library</span>(plotly)
+<span class="hljs-keyword">library</span>(sf)
+<span class="hljs-keyword">library</span>(data.table)
+<span class="hljs-keyword">library</span>(tibble)
+<span class="hljs-keyword">library</span>(tidyr)
+<span class="hljs-keyword">library</span>(reshape2)
+<span class="hljs-keyword">library</span>(FactoMineR)
+<span class="hljs-keyword">library</span>(factoextra)
+<span class="hljs-keyword">library</span>(factoextra)
+<span class="hljs-keyword">library</span>(gridExtra)
+<span class="hljs-keyword">library</span>(grid)
+<span class="hljs-keyword">library</span>(cluster)
+<span class="hljs-keyword">library</span>(dbscan)
+<span class="hljs-keyword">library</span>(magrittr)
+<span class="hljs-keyword">library</span>(dplyr)
+<span class="hljs-keyword">library</span>(knitr)
+<span class="hljs-keyword">library</span>(clustertend)
+<span class="hljs-keyword">library</span>(NbClust)
+<span class="hljs-keyword">library</span>(fpc)
+<span class="hljs-keyword">library</span>(clValid)
+<span class="hljs-keyword">library</span>(kohonen)
+<span class="hljs-keyword">library</span>(mapSpain)
+<span class="hljs-keyword">library</span>(tidyverse)
+<span class="hljs-keyword">library</span>(sf)
+<span class="hljs-keyword">library</span>(htmltools)</code></pre>
+</div>
+<div id="section-preparación-bbdd" class="section level1">
+<div name="PREPARACIÓN_BBDD" data-unique="PREPARACIÓN_BBDD"></div><h1><strong>PREPARACIÓN BBDD</strong></h1>
+<p>Primero, importaremos los archivos que hemos utilizado, los cuales
+vienen en formato “.csv” y contienen datos de generación y demanda de
+energía por meses desde 2013 hasta 2023, aunque en este caso solo nos
+quedaremos con los de generación. Cada archivo representa una comunidad
+autónoma distinta.</p>
+<pre class="r"><code class="hljs">andalucia = read.csv(<span class="hljs-string">"C:/Users/Angelita/Desktop/C.DATOS/2/PROY II/DATOS/OBJETIVO 1/datos/Andalucía_genvsdem.csv"</span>, row.names = <span class="hljs-number">1</span>, as.is = <span class="hljs-literal">TRUE</span>)
+aragon = read.csv(<span class="hljs-string">"C:/Users/Angelita/Desktop/C.DATOS/2/PROY II/DATOS/OBJETIVO 1/datos/Aragón_genvsdem.csv"</span>, row.names = <span class="hljs-number">1</span>, as.is = <span class="hljs-literal">TRUE</span>)
+asturias = read.csv(<span class="hljs-string">"C:/Users/Angelita/Desktop/C.DATOS/2/PROY II/DATOS/OBJETIVO 1/datos/Asturias, Principado de_genvsdem.csv"</span>, row.names = <span class="hljs-number">1</span>, as.is = <span class="hljs-literal">TRUE</span>)
+baleares = read.csv(<span class="hljs-string">"C:/Users/Angelita/Desktop/C.DATOS/2/PROY II/DATOS/OBJETIVO 1/datos/Balears, Illes_genvsdem.csv"</span>, row.names = <span class="hljs-number">1</span>, as.is = <span class="hljs-literal">TRUE</span>)
+canarias = read.csv(<span class="hljs-string">"C:/Users/Angelita/Desktop/C.DATOS/2/PROY II/DATOS/OBJETIVO 1/datos/Canarias_genvsdem.csv"</span>, row.names = <span class="hljs-number">1</span>, as.is = <span class="hljs-literal">TRUE</span>)
+cantabria = read.csv(<span class="hljs-string">"C:/Users/Angelita/Desktop/C.DATOS/2/PROY II/DATOS/OBJETIVO 1/datos/Cantabria_genvsdem.csv"</span>, row.names = <span class="hljs-number">1</span>, as.is = <span class="hljs-literal">TRUE</span>)
+castillalamancha = read.csv(<span class="hljs-string">"C:/Users/Angelita/Desktop/C.DATOS/2/PROY II/DATOS/OBJETIVO 1/datos/Castilla - La Mancha_genvsdem.csv"</span>, row.names = <span class="hljs-number">1</span>, as.is = <span class="hljs-literal">TRUE</span>)
+castillayleon = read.csv(<span class="hljs-string">"C:/Users/Angelita/Desktop/C.DATOS/2/PROY II/DATOS/OBJETIVO 1/datos/Castilla y León_genvsdem.csv"</span>, row.names = <span class="hljs-number">1</span>, as.is = <span class="hljs-literal">TRUE</span>)
+cataluña = read.csv(<span class="hljs-string">"C:/Users/Angelita/Desktop/C.DATOS/2/PROY II/DATOS/OBJETIVO 1/datos/Cataluña_genvsdem.csv"</span>, row.names = <span class="hljs-number">1</span>, as.is = <span class="hljs-literal">TRUE</span>)
+comunitatValencia = read.csv(<span class="hljs-string">"C:/Users/Angelita/Desktop/C.DATOS/2/PROY II/DATOS/OBJETIVO 1/datos/Comunitat Valenciana_genvsdem.csv"</span>, row.names = <span class="hljs-number">1</span>, as.is = <span class="hljs-literal">TRUE</span>)
+extremadura = read.csv(<span class="hljs-string">"C:/Users/Angelita/Desktop/C.DATOS/2/PROY II/DATOS/OBJETIVO 1/datos/Extremadura_genvsdem.csv"</span>, row.names = <span class="hljs-number">1</span>, as.is = <span class="hljs-literal">TRUE</span>)
+galicia = read.csv(<span class="hljs-string">"C:/Users/Angelita/Desktop/C.DATOS/2/PROY II/DATOS/OBJETIVO 1/datos/Galicia_genvsdem.csv"</span>, row.names = <span class="hljs-number">1</span>, as.is = <span class="hljs-literal">TRUE</span>)
+madrid = read.csv(<span class="hljs-string">"C:/Users/Angelita/Desktop/C.DATOS/2/PROY II/DATOS/OBJETIVO 1/datos/Madrid, Comunidad de_genvsdem.csv"</span>, row.names = <span class="hljs-number">1</span>, as.is = <span class="hljs-literal">TRUE</span>)
+murcia = read.csv(<span class="hljs-string">"C:/Users/Angelita/Desktop/C.DATOS/2/PROY II/DATOS/OBJETIVO 1/datos/Murcia, Región de_genvsdem.csv"</span>, row.names = <span class="hljs-number">1</span>, as.is = <span class="hljs-literal">TRUE</span>)
+navarra = read.csv(<span class="hljs-string">"C:/Users/Angelita/Desktop/C.DATOS/2/PROY II/DATOS/OBJETIVO 1/datos/Navarra, Comunidad Foral de_genvsdem.csv"</span>, row.names = <span class="hljs-number">1</span>, as.is = <span class="hljs-literal">TRUE</span>)
+paisVasco = read.csv(<span class="hljs-string">"C:/Users/Angelita/Desktop/C.DATOS/2/PROY II/DATOS/OBJETIVO 1/datos/País Vasco_genvsdem.csv"</span>, row.names = <span class="hljs-number">1</span>, as.is = <span class="hljs-literal">TRUE</span>)
+laRioja = read.csv(<span class="hljs-string">"C:/Users/Angelita/Desktop/C.DATOS/2/PROY II/DATOS/OBJETIVO 1/datos/Rioja, La_genvsdem.csv"</span>, row.names = <span class="hljs-number">1</span>, as.is = <span class="hljs-literal">TRUE</span>)</code></pre>
+<p>Dado que nuestros datos están organizados por meses, consideramos que
+sería más conveniente convertirlos en trimestres. Esta decisión se basa
+en la idea de que la agregación de datos en trimestres facilita la
+comprensión de las tendencias y patrones , ya que proporciona una vista
+más general y menos volátil de los datos en comparación con el nivel
+mensual. Por lo que realizamos una serie de funciones que mostramos a
+continuación para que se entienda cómo se ha realizado.</p>
+<pre class="r"><code class="hljs"><span class="hljs-comment">#Esta función la hemos utilizafo para agrupar las observaciones por cada trimestre, pueste que nuestro dataframe inicial contenía los datos de generación y demanda en meses.</span>
+agrupar_por_trimestre &lt;- <span class="hljs-keyword">function</span>(datos) {
+  <span class="hljs-comment"># Crear vectores para almacenar los datos agrupados</span>
+  datos_agrupadosG &lt;- numeric(length(datos) / <span class="hljs-number">3</span>)
+  datos_agrupadosD &lt;- numeric(length(datos) / <span class="hljs-number">3</span>)
+  
+  <span class="hljs-comment"># Iterar sobre cada grupo de tres elementos</span>
+  <span class="hljs-keyword">for</span> (i <span class="hljs-keyword">in</span> <span class="hljs-number">1</span>:(length(datos_agrupadosG))) {
+    <span class="hljs-comment"># Calcular el índice inicial y final para cada grupo de tres elementos</span>
+    indice_inicial &lt;- (i - <span class="hljs-number">1</span>) * <span class="hljs-number">3</span> + <span class="hljs-number">1</span>
+    indice_final &lt;- i * <span class="hljs-number">3</span>
+    
+    <span class="hljs-comment"># Calcular la media de los elementos dentro del grupo y almacenar el resultado en los vectores datos_agrupadosG y datos_agrupadosD</span>
+    datos_agrupadosG[i] &lt;- sum(datos[<span class="hljs-number">1</span>, indice_inicial:indice_final])/<span class="hljs-number">3</span>
+    datos_agrupadosD[i] &lt;- sum(datos[<span class="hljs-number">2</span>, indice_inicial:indice_final])/<span class="hljs-number">3</span>
+  }
+  
+  <span class="hljs-comment"># Crear dataframes individuales para generación y demanda</span>
+  df_generacion &lt;- data.frame(datos_agrupadosG)
+  df_demanda &lt;- data.frame(datos_agrupadosD)
+  
+  <span class="hljs-comment"># Retornar los dataframes individuales</span>
+  <span class="hljs-keyword">return</span>(list(Generacion = df_generacion, Demanda = df_demanda))
+}
+
+<span class="hljs-comment">#Utilizada para ponerle el nombre a cada una de las columnas en el formato "añoTtrimestre"</span>
+
+generar_añoTc &lt;- <span class="hljs-keyword">function</span>(año, df) {
+  <span class="hljs-comment"># Inicializar la lista para almacenar los valores de añoTc en el formato deseado</span>
+  lista &lt;- c()
+  
+  <span class="hljs-comment"># Iterar sobre las columnas del dataframe</span>
+  <span class="hljs-keyword">for</span> (i <span class="hljs-keyword">in</span> <span class="hljs-number">1</span>:dim(df)[<span class="hljs-number">2</span>]) {
+    <span class="hljs-comment"># Verificar si el índice es un múltiplo de 4 (excepto el primero)</span>
+    <span class="hljs-keyword">if</span> (i %% <span class="hljs-number">4</span> == <span class="hljs-number">1</span> &amp; i != <span class="hljs-number">1</span>) {
+      año &lt;- año + <span class="hljs-number">1</span>
+    }
+    <span class="hljs-comment"># Calcular el trimestre</span>
+    trimestre &lt;- (i %% <span class="hljs-number">4</span>)
+    <span class="hljs-keyword">if</span> (trimestre == <span class="hljs-number">0</span>){
+      trimestre = <span class="hljs-number">4</span>
+    }
+    <span class="hljs-comment"># Agregar el valor en el formato deseado a la lista</span>
+    lista &lt;- c(lista, paste(año, <span class="hljs-string">"T"</span>, trimestre, sep = <span class="hljs-string">""</span>))
+  }
+  
+  <span class="hljs-comment"># Retornar la lista resultante</span>
+  <span class="hljs-keyword">return</span>(lista)
+}</code></pre>
+<p>En el siguiente fragmento de código, hemos implementado funciones
+para procesar los datos de cada archivo de cada comunidad. Estas
+funciones se encargan de agrupar los datos por generación y por demanda
+en dataframes separados, aunque en este caso solo nos quedaremos con
+DEMANDA.</p>
+</div>
+<div id="section-clustering" class="section level1">
+<div name="CLUSTERING" data-unique="CLUSTERING"></div><h1><strong>CLUSTERING</strong></h1>
+<p>Comenzaremos aplicando la técnica de clustering. Inicialmente,
+consideramos que usar distancias basadas en la correlación sería
+apropiado. Sin embargo, después de varios intentos, observamos que la
+métrica de Silhouette resultaba negativa, lo que indicaba una mala
+clasificación. Tras reflexionar sobre ello, concluimos que esto podría
+ser debido a la estacionalidad, ya que las variables podrían estar
+altamente correlacionadas entre sí.</p>
+<p>Por lo tanto, decidimos optar por medidas de distancias, como la
+distancia euclídea y la de Manhattan, lo que nos permitiría agrupar en
+función de las diferencias entre los valores. Esto tendría sentido, ya
+que las CCAA con valores más similares estarían agrupadas entre sí.</p>
+<pre class="r"><code class="hljs">df_demanda_o &lt;- df_demanda
+df_demanda &lt;- scale(df_demanda, center = <span class="hljs-literal">TRUE</span>, scale = <span class="hljs-literal">FALSE</span>)</code></pre>
+<p>Primero, calcularemos las matrices de distancias utilizando estas dos
+métricas diferentes, además de representarlas en un mapa:</p>
+<pre class="r"><code class="hljs"><span class="hljs-comment">#DISTANCIA EUCLIDEA</span>
+midist_euclidean &lt;- get_dist(df_demanda, stand = <span class="hljs-literal">FALSE</span>, method = <span class="hljs-string">"euclidean"</span>)
+fviz_dist(midist_euclidean, show_labels = <span class="hljs-literal">TRUE</span>, lab_size = <span class="hljs-number">0.3</span>,
+          gradient = list(low = <span class="hljs-string">"#00AFBB"</span>, mid = <span class="hljs-string">"white"</span>, high = <span class="hljs-string">"#FC4E07"</span>))</code></pre>
+<p><img src="./CLUSTERING DEMANDA (OBJETIVO 2)_files/unnamed-chunk-6-1.png" width="672"></p>
+<pre class="r"><code class="hljs"><span class="hljs-comment">#Distancia de Manhattan</span>
+midist &lt;- get_dist(df_demanda, stand = <span class="hljs-literal">FALSE</span>, method = <span class="hljs-string">"manhattan"</span>)
+fviz_dist(midist, show_labels = <span class="hljs-literal">TRUE</span>, lab_size = <span class="hljs-number">0.3</span>,
+          gradient = list(low = <span class="hljs-string">"#00AFBB"</span>, mid = <span class="hljs-string">"white"</span>, high = <span class="hljs-string">"#FC4E07"</span>))</code></pre>
+<p><img src="./CLUSTERING DEMANDA (OBJETIVO 2)_files/unnamed-chunk-7-1.png" width="672"></p>
+<p>Después de generar los mapas de calor para las distancias utilizando
+tanto la distancia euclidiana como la de Manhattan, observamos que ambos
+muestran 5-6 clústeres distintos, ya que podemos identificar en función
+de quién lo observe estos números de “cuadrados” de color azul
+diferenciados. Además, en ambos casos, las observaciones están bastante
+cerca del centro.</p>
+<p>Dado que hemos obtenido resultados bastante similares en la
+representación de las distancias, hemos decidido utilizar la distancia
+euclidiana para continuar con nuestro análisis.</p>
+<p>Ahora calcularemos el <strong>estadístico de Hopkins,</strong> se
+trata de un estadístico que nos da información si los datos que tenemos
+son buenos para realizar agrupamientos.</p>
+<pre class="r"><code class="hljs">set.seed(<span class="hljs-number">100</span>)
+myN = c(<span class="hljs-number">4</span>, <span class="hljs-number">8</span>, <span class="hljs-number">12</span>)  <span class="hljs-comment"># m</span>
+myhopkins = <span class="hljs-literal">NULL</span>
+myseed = sample(<span class="hljs-number">1</span>:<span class="hljs-number">1000</span>, <span class="hljs-number">10</span>)
+<span class="hljs-keyword">for</span> (i <span class="hljs-keyword">in</span> myN) {
+  <span class="hljs-keyword">for</span> (j <span class="hljs-keyword">in</span> myseed) {
+    tmp = get_clust_tendency(data = df_demanda, n = i, graph = <span class="hljs-literal">FALSE</span>, seed = j)
+    myhopkins = c(myhopkins, tmp$hopkins_stat)
+  }
+}
+summary(myhopkins)</code></pre>
+<pre><code class="hljs">##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+##  0.7501  0.8761  0.8905  0.8833  0.9101  0.9268</code></pre>
+<p>El estadístico de Hopkins nos confirma una cierta tendencia de
+agrupamiento, puesto que ha sido calculado para diferentes valores de m
+(n en la función) y con diferentes semillas aleatorias y sus valores
+oscilan entre 0.7501 y 0.9268, es decir, están cercanos a 1.</p>
+<p>Ahora realizaremos una serie de modelos para realizar los
+agrupamientos, y luego realizaremos una validación para elegir el mejor
+de todos ellos.</p>
+<div id="section-modelos-jerárquicos" class="section level2">
+<div name="Modelos_Jerárquicos" data-unique="Modelos_Jerárquicos"></div><h2>Modelos Jerárquicos</h2>
+<div id="section-método-de-ward" class="section level3">
+<h3>Método de Ward</h3>
+<pre class="r"><code class="hljs">p1 = fviz_nbclust(x = df_demanda, FUNcluster = hcut, method = <span class="hljs-string">"silhouette"</span>, 
+                  hc_method = <span class="hljs-string">"ward.D2"</span>, k.max = <span class="hljs-number">10</span>, verbose = <span class="hljs-literal">FALSE</span>, 
+                  hc_metric = <span class="hljs-string">"euclidean"</span>) + labs(title = <span class="hljs-string">"Num. optimo clusters"</span>)
+p2 = fviz_nbclust(x = df_demanda, FUNcluster = hcut, method = <span class="hljs-string">"wss"</span>, 
+                  hc_method = <span class="hljs-string">"ward.D2"</span>, k.max = <span class="hljs-number">10</span>, verbose = <span class="hljs-literal">FALSE</span>, 
+                  hc_metric = <span class="hljs-string">"euclidean"</span>) + labs(title = <span class="hljs-string">"Num. optimo clusters"</span>)
+grid.arrange(p1, p2, nrow = <span class="hljs-number">1</span>)</code></pre>
+<p><img src="./CLUSTERING DEMANDA (OBJETIVO 2)_files/unnamed-chunk-9-1.png" width="672"></p>
+<p>Después de analizar tanto el gráfico de Silhouette como el de la
+variabilidad intra-cluster, hemos llegado a la conclusión de que el
+número óptimo de clústeres es 5. A pesar de que el valor de Silhouette
+para 5 clústeres es ligeramente inferior al valor máximo obtenido con 2
+clústeres, sigue siendo suficientemente alto, indicando una buena
+separación entre los clústeres. Además, el análisis de la variabilidad
+intra-cluster muestra una distancia intra-cluster muy baja para este
+número de clusteres, lo que nos informa de que la distancia entre
+observaciones dentro del cluster es muy baja. Por otra parte, vemos que
+para 4 la distancia intra-cluster es muy similar, pero el valor de
+Silhouette es menor, por lo que acabamos decidiendo 5.</p>
+<p>Esta tabla nos sirve para conocer cómo se distribuyen las
+observaciones en cada clúster, en ella podemos observar que el grupo 2
+tiene un mayor número de observaciones que el resto, y el 1,4 y 5 tienen
+el mismo.</p>
+<pre class="r"><code class="hljs">clust1 &lt;- hclust(midist_euclidean, method=<span class="hljs-string">"ward.D2"</span>)
+grupos1 &lt;- cutree(clust1, k=<span class="hljs-number">5</span>)
+table(grupos1)</code></pre>
+<pre><code class="hljs">## grupos1
+## 1 2 3 4 5 
+## 2 6 5 2 2</code></pre>
+<p>A continuación, realizaremos el dendograma que nos ofrece la
+estructura de los datos y cómo se pueden separar, de una forma más
+visual y simple:</p>
+<pre class="r"><code class="hljs">fviz_dend(clust1, k = <span class="hljs-number">5</span>,
+          cex = <span class="hljs-number">0.5</span>, color_labels_by_k = <span class="hljs-literal">TRUE</span>,
+          rect = <span class="hljs-literal">TRUE</span>) <span class="hljs-comment"># dibujar rectángulos</span></code></pre>
+<p><img src="./CLUSTERING DEMANDA (OBJETIVO 2)_files/unnamed-chunk-11-1.png" width="672"></p>
+<pre class="r"><code class="hljs">fviz_cluster(object = list(data=df_demanda, cluster=grupos1), stand = <span class="hljs-literal">FALSE</span>,
+             ellipse.type = <span class="hljs-string">"convex"</span>, geom = <span class="hljs-string">"text"</span>, show.clust.cent = <span class="hljs-literal">FALSE</span>,
+             labelsize = <span class="hljs-number">8</span>)  +
+  labs(title = <span class="hljs-string">"Modelo jerarquico + Proyeccion PCA"</span>,
+       subtitle = <span class="hljs-string">"Dist euclidea, Metodo Ward, K=5&gt;"</span>) +
+  theme_bw() +
+  theme(legend.position = <span class="hljs-string">"bottom"</span>)</code></pre>
+<p><img src="./CLUSTERING DEMANDA (OBJETIVO 2)_files/unnamed-chunk-12-1.png" width="672"></p>
+<pre class="r"><code class="hljs">fviz_cluster(object = list(data=df_demanda, cluster=grupos1), stand = <span class="hljs-literal">FALSE</span>,
+             ellipse.type = <span class="hljs-string">"convex"</span>, geom = <span class="hljs-string">"text"</span>, show.clust.cent = <span class="hljs-literal">FALSE</span>,
+             labelsize = <span class="hljs-number">8</span>,axes = <span class="hljs-number">3</span>:<span class="hljs-number">4</span>)  +
+  labs(title = <span class="hljs-string">"Modelo jerarquico + Proyeccion PCA"</span>,
+       subtitle = <span class="hljs-string">"Dist euclidea, Metodo Ward, K=5&gt;"</span>) +
+  theme_bw() +
+  theme(legend.position = <span class="hljs-string">"bottom"</span>)</code></pre>
+<p><img src="./CLUSTERING DEMANDA (OBJETIVO 2)_files/unnamed-chunk-12-2.png" width="672"></p>
+<pre class="r"><code class="hljs">medias &lt;- rowMeans(df_demanda_o, na.rm = <span class="hljs-literal">TRUE</span>)
+media_general &lt;- sum(medias) / length(medias)
+barplot(medias[order(medias, decreasing = <span class="hljs-literal">TRUE</span>)],las =<span class="hljs-number">2</span>, col=<span class="hljs-string">'blue'</span>,main=<span class="hljs-string">'Media de demanda por CCAA'</span>)
+abline(h = media_general, col = <span class="hljs-string">"red"</span>)</code></pre>
+<p><img src="./CLUSTERING DEMANDA (OBJETIVO 2)_files/unnamed-chunk-12-3.png" width="672"></p>
+<pre class="r"><code class="hljs">par(pty=<span class="hljs-string">"s"</span>)</code></pre>
+<p>Después de crear el gráfico de scores para las dimensiones 1 y 2,
+podemos observar que los clusters están claramente diferenciados.
+Específicamente, la dimensión 1 contiene el 99.5% de la variabilidad, lo
+que indica que es la dimensión principal y que es suficiente para
+representar los clústeres de manera efectiva. Todo lo que vamos
+explicando queda reflejado en el barplot que hemos creado, donde la
+línea roja representa la media de valores de generación.</p>
+<p>Par analizar los clústeres iremos de derecha a izquierda en el
+gráfico, es decir, del número 3(verde) al número 1(rojo), ya que
+consideramos que seguir un orden a la hora de la explicación nos puede
+servir de guía de un patrón.</p>
+<p>En primer lugar, empezaremos explicando porque se distribuye de esta
+forma, como hemos utilizado la distancia euclídea las observaciones se
+agruparán en función de lo lejanas o cercanas que estén entre ellas. En
+este caso las que tienen un valor de demanda más grande o por encima de
+la media 0 (las rojas, azules y moradas) se encuentran situadas a la
+izquierda y las otras que son las que se encuentran por debajo de la
+media, es decir, la amarilla y la verde se encuentran a la derecha. Esto
+también lo podemos comparar con el gráfico de barras para las medias de
+las CCAA, donde podemos apreciar esto que acabamos de describir.</p>
+<p>Ahora pasaremos a analizarlos de forma individual:</p>
+<ul>
+<li><p>Cluster 1: se trata del clúster de color rojo. En este, podemos
+observar que las observaciones se encuentran ligeramente separadas entre
+ellas en la dimensión 1 y, además, se trata de las observaciones con
+mayor demanda, tal como se puede ver tanto en el dataframe como en el
+gráfico de medias. Estas observaciones corresponden a Cataluña y
+Andalucía, dos de las comunidades más grandes y pobladas de España, lo
+que contribuye a su alta demanda de energía. Esto también se refleja en
+nuestro dataframe de densidad poblacional. Cataluña tiene un importante
+sector industrial, mientras que Andalucía presenta un gran consumo
+energético debido a su extensión geográfica y la necesidad de energía
+para el turismo y la agricultura.</p></li>
+<li><p>Cluster 4: se trata del clúster de color azul. En este clúster,
+las observaciones se encuentran prácticamente juntas en la dimensión 1,
+lo que indica que están bien clasificadas. Además, estas observaciones
+tienen un valor de demanda bastante alto. Las regiones correspondientes
+a este clúster son Madrid y Comunidad Valenciana. Madrid, como centro
+económico de España, requiere una alta demanda de energía para soportar
+sus actividades comerciales, industriales y residenciales. Por otra
+parte, Comunidad Valenciana cuenta con una gran presencia industrial y
+turística, especialmente en los meses de verano, lo que aumenta
+significativamente su demanda de energía.</p></li>
+<li><p>Cluster 5: se trata del clúster de color morado/rosa. En este
+clúster, las observaciones se encuentran muy cercanas en la dimensión 1,
+lo que indica que están bien clasificadas. Estas observaciones tienen un
+valor de demanda ligeramente superior a la media, por lo que se
+consideran importantes demandantes de energía. Las regiones
+correspondientes a este clúster son País Vasco y Galicia. El País Vasco
+es una región industrial con alta actividad manufacturera y portuaria,
+lo que genera una considerable demanda de energía. Galicia, aunque más
+rural, tiene una industria pesquera y agrícola significativa, lo que
+también requiere una gran cantidad de energía.</p></li>
+<li><p>Cluster 2: se trata del clúster de color amarillo. En este
+clúster, podemos observar una mayor cantidad de observaciones en
+comparación con el anterior, todas ellas muy cercanas, lo que indica una
+buena clasificación. Estas observaciones tienen un valor de demanda
+inferior a la media, por lo que se consideran demandantes de energía
+menores. Las regiones correspondientes a este clúster son las Castillas,
+Canarias, Aragón, Asturias y Murcia. Los motivos de estos valores se
+deben principalmente a su menor densidad poblacional y a la menor
+actividad industrial. Aunque Canarias tiene una gran demanda energética
+debido a su insularidad, esta es menor comparada con otras
+regiones.</p></li>
+<li><p>Cluster 3: se trata del clúster de color verde. En este clúster,
+observamos una mayor cantidad de observaciones en comparación con el
+anterior, todas ellas muy cercanas, lo que indica una buena
+clasificación. Estas observaciones tienen un valor de demanda inferior a
+la media, lo que las posiciona como demandantes de energía menores,
+siendo las menos demandantes de toda España. Las regiones incluidas en
+este clúster son Cantabria, La Rioja, Navarra, Extremadura y Baleares.
+Estas regiones se caracterizan por tener menor densidad poblacional y
+menos actividad industrial en comparación con otras áreas del país.
+Aunque Cantabria, La Rioja y Navarra están desarrolladas, sus economías
+son más especializadas y de menor escala. Extremadura, siendo una de las
+regiones menos pobladas, tiene una demanda de energía relativamente
+baja. Por su parte, Baleares, a pesar de ser un importante destino
+turístico, presenta una demanda energética menor debido a su tamaño y la
+estacionalidad del turismo.</p>
+<h3 id="section-método-de-medias">Método de Medias</h3></li>
+</ul>
+<pre class="r"><code class="hljs">p1 = fviz_nbclust(x = df_demanda, FUNcluster = hcut, method = <span class="hljs-string">"silhouette"</span>, 
+                  hc_method = <span class="hljs-string">"average"</span>, k.max = <span class="hljs-number">10</span>, verbose = <span class="hljs-literal">FALSE</span>, 
+                  hc_metric = <span class="hljs-string">"euclidean"</span>) + labs(title = <span class="hljs-string">"Num. optimo clusters"</span>)
+p2 = fviz_nbclust(x = df_demanda, FUNcluster = hcut, method = <span class="hljs-string">"wss"</span>, 
+                  hc_method = <span class="hljs-string">"average"</span>, k.max = <span class="hljs-number">10</span>, verbose = <span class="hljs-literal">FALSE</span>, 
+                  hc_metric = <span class="hljs-string">"euclidean"</span>) + labs(title = <span class="hljs-string">"Num. optimo clusters"</span>)
+grid.arrange(p1, p2, nrow = <span class="hljs-number">1</span>)</code></pre>
+<p><img src="./CLUSTERING DEMANDA (OBJETIVO 2)_files/unnamed-chunk-13-1.png" width="672"></p>
+<p>Después de analizar tanto el gráfico de Silhouette como el de la
+variabilidad intra-cluster, hemos llegado a la conclusión de que el
+número óptimo de clústeres es 4. A pesar de que el valor de Silhouette
+para 4 clústeres es inferior al valor máximo obtenido con 2 clústeres,
+sigue siendo suficientemente alto, indicando una buena separación entre
+los clústeres. Además, el análisis de la variabilidad intra-cluster
+muestra una distancia intra-cluster muy baja para este número de
+clusteres, lo que nos informa de que la distancia entre observaciones
+dentro del cluster es muy baja. Por otra parte, vemos que para 5 la
+distancia intra-cluster es muy similar, pero el valor de Silhouette es
+menor, por lo que acabamos decidiendo 4.</p>
+<p>A continuación, realizaremos el dendograma que nos ofrece la
+estructura de los datos y cómo se pueden separar, de una forma más
+visual y simple:</p>
+<pre class="r"><code class="hljs">clust2 &lt;- hclust(midist_euclidean, method=<span class="hljs-string">"average"</span>)
+grupos2 = cutree(clust2, k = <span class="hljs-number">4</span>)
+fviz_dend(clust2, k = <span class="hljs-number">4</span>,
+          cex = <span class="hljs-number">0.5</span>,
+          color_labels_by_k = <span class="hljs-literal">TRUE</span>, <span class="hljs-comment"># colorear etiquetas por grupo</span>
+          rect = <span class="hljs-literal">TRUE</span>) <span class="hljs-comment"># dibujar rectángulos</span></code></pre>
+<p><img src="./CLUSTERING DEMANDA (OBJETIVO 2)_files/unnamed-chunk-14-1.png" width="672"></p>
+<pre class="r"><code class="hljs">fviz_cluster(object = list(data=df_demanda, cluster=grupos2), stand = <span class="hljs-literal">FALSE</span>,
+             ellipse.type = <span class="hljs-string">"convex"</span>, geom = <span class="hljs-string">"text"</span>, show.clust.cent = <span class="hljs-literal">FALSE</span>,
+             labelsize = <span class="hljs-number">8</span>)  +
+  labs(title = <span class="hljs-string">"Modelo jerarquico + Proyeccion PCA"</span>,
+       subtitle = <span class="hljs-string">"Dist euclidea, Metodo Ward, K=4&gt;"</span>) +
+  theme_bw() +
+  theme(legend.position = <span class="hljs-string">"bottom"</span>)</code></pre>
+<p><img src="./CLUSTERING DEMANDA (OBJETIVO 2)_files/unnamed-chunk-15-1.png" width="672"></p>
+<pre class="r"><code class="hljs">fviz_cluster(object = list(data=df_demanda, cluster=grupos2), stand = <span class="hljs-literal">FALSE</span>,
+             ellipse.type = <span class="hljs-string">"convex"</span>, geom = <span class="hljs-string">"text"</span>, show.clust.cent = <span class="hljs-literal">FALSE</span>,
+             labelsize = <span class="hljs-number">8</span>,axes = <span class="hljs-number">3</span>:<span class="hljs-number">4</span>)  +
+  labs(title = <span class="hljs-string">"Modelo jerarquico + Proyeccion PCA"</span>,
+       subtitle = <span class="hljs-string">"Dist euclidea, Metodo Ward, K=4&gt;"</span>) +
+  theme_bw() +
+  theme(legend.position = <span class="hljs-string">"bottom"</span>)</code></pre>
+<p><img src="./CLUSTERING DEMANDA (OBJETIVO 2)_files/unnamed-chunk-15-2.png" width="672"></p>
+<p>Después de crear el gráfico de scores para las dimensiones 1 y 2,
+podemos observar que los clusters están claramente diferenciados.
+Específicamente, la dimensión 1 contiene el 99.5% de la variabilidad, lo
+que indica que es la dimensión principal y que es suficiente para
+representar los clústeres de manera efectiva. Todo lo que vamos
+explicando queda reflejado en el barplot que hemos creado, donde la
+línea roja representa la media de valores de generación.</p>
+<p>Par analizar los clústeres iremos de derecha a izquierda en el
+gráfico, es decir, del número 3(verde) al número 1(rojo), ya que
+consideramos que seguir un orden a la hora de la explicación nos puede
+servir de guía de un patrón.</p>
+<p>En primer lugar, empezaremos explicando porque se distribuye de esta
+forma, como hemos utilizado la distancia euclídea las observaciones se
+agruparán en función de lo lejanas o cercanas que estén entre ellas. En
+este caso las que tienen un valor de demanda más grande o por encima de
+la media 0 (las rojas, azules y moradas) se encuentran situadas a la
+izquierda y las otras que son las que se encuentran por debajo de la
+media, es decir, la amarilla y la verde se encuentran a la derecha. Esto
+también lo podemos comparar con el gráfico de barras para las medias de
+las CCAA, donde podemos apreciar esto que acabamos de describir.</p>
+<p>Ahora pasaremos a analizarlos de forma individual:</p>
+<ul>
+<li><p>Cluster 1: se trata del clúster de color rojo. En este, podemos
+observar que las observaciones se encuentran ligeramente separadas entre
+ellas en la dimensión 1 y, además, se trata de las observaciones con
+mayor demanda, tal como se puede ver tanto en el dataframe como en el
+gráfico de medias. Estas observaciones corresponden a Cataluña y
+Andalucía, dos de las comunidades más grandes y pobladas de España, lo
+que contribuye a su alta demanda de energía. Esto también se refleja en
+nuestro dataframe de densidad poblacional. Cataluña tiene un importante
+sector industrial, mientras que Andalucía presenta un gran consumo
+energético debido a su extensión geográfica y la necesidad de energía
+para el turismo y la agricultura.</p></li>
+<li><p>Cluster 3: se trata del clúster de color azul. En este clúster,
+las observaciones se encuentran prácticamente juntas en la dimensión 1,
+lo que indica que están bien clasificadas. Además, estas observaciones
+tienen un valor de demanda bastante alto. Las regiones correspondientes
+a este clúster son Madrid y Comunidad Valenciana. Madrid, como centro
+económico de España, requiere una alta demanda de energía para soportar
+sus actividades comerciales, industriales y residenciales. Por otra
+parte, Comunidad Valenciana cuenta con una gran presencia industrial y
+turística, especialmente en los meses de verano, lo que aumenta
+significativamente su demanda de energía.</p></li>
+<li><p>Cluster 4: se trata del clúster de color morado/rosa. En este
+clúster, las observaciones se encuentran muy cercanas en la dimensión 1,
+lo que indica que están bien clasificadas. Estas observaciones tienen un
+valor de demanda ligeramente superior a la media, por lo que se
+consideran importantes demandantes de energía. Las regiones
+correspondientes a este clúster son País Vasco y Galicia. El País Vasco
+es una región industrial con alta actividad manufacturera y portuaria,
+lo que genera una considerable demanda de energía. Galicia, aunque más
+rural, tiene una industria pesquera y agrícola significativa, lo que
+también requiere una gran cantidad de energía.</p></li>
+<li><p>Cluster 2: se trata del clúster de color amarillo, observamos una
+mayor cantidad de observaciones en comparación con el clúster anterior,
+todas ellas muy cercanas entre sí, lo que indica una buena
+clasificación. Estas observaciones tienen un valor de demanda inferior a
+la media, considerándose demandantes de energía menores. Las regiones
+correspondientes a este clúster son las Castillas, Canarias, Aragón,
+Asturias, Murcia, Cantabria, La Rioja, Navarra, Extremadura y Baleares.
+Las razones detrás de estos valores se deben principalmente a su menor
+densidad poblacional y a la menor actividad industrial. Aunque Canarias
+presenta una gran demanda energética debido a su insularidad, esta es
+menor comparada con otras regiones. Cantabria, La Rioja y Navarra,
+aunque desarrolladas, tienen economías más especializadas y de menor
+escala. Extremadura, siendo una de las regiones menos pobladas, muestra
+una demanda de energía relativamente baja. Por su parte, Baleares, a
+pesar de ser un importante destino turístico, tiene una demanda
+energética menor debido a su tamaño y la estacionalidad del
+turismo.</p></li>
+</ul>
+</div>
+</div>
+<div id="section-métodos-partición" class="section level2">
+<div name="Métodos_Partición" data-unique="Métodos_Partición"></div><h2>Métodos Partición</h2>
+<div id="section-método-de-kmeans" class="section level3">
+<h3>Método de Kmeans</h3>
+<pre class="r"><code class="hljs">p1 = fviz_nbclust(x = df_demanda, FUNcluster = kmeans, method = <span class="hljs-string">"silhouette"</span>, 
+             k.max = <span class="hljs-number">10</span>, verbose = <span class="hljs-literal">FALSE</span>) +
+  labs(title = <span class="hljs-string">"K-means"</span>)
+p2 = fviz_nbclust(x = df_demanda, FUNcluster = kmeans, method = <span class="hljs-string">"wss"</span>, 
+             k.max = <span class="hljs-number">10</span>, verbose = <span class="hljs-literal">FALSE</span>) +
+  labs(title = <span class="hljs-string">"K-means"</span>)
+grid.arrange(p1, p2, nrow = <span class="hljs-number">1</span>)</code></pre>
+<p><img src="./CLUSTERING DEMANDA (OBJETIVO 2)_files/unnamed-chunk-16-1.png" width="672"></p>
+<p>Después de analizar tanto el gráfico de Silhouette como el de la
+variabilidad intra-cluster, hemos llegado a la conclusión de que el
+número óptimo de clústeres es 5. A pesar de que el valor de Silhouette
+para 5 clústeres es ligeramente inferior al valor máximo obtenido con 2
+clústeres, sigue siendo suficientemente alto, indicando una buena
+separación entre los clústeres. Además, el análisis de la variabilidad
+intra-cluster muestra una distancia intra-cluster muy baja para este
+número de clusteres, lo que nos informa de que la distancia entre
+observaciones dentro del cluster es muy baja. Por otra parte, vemos que
+para 4 la distancia intra-cluster es muy similar, pero el valor de
+Silhouette es menor, por lo que acabamos decidiendo 5.</p>
+<p>Esta tabla nos sirve para conocer cómo se distribuyen las
+observaciones en cada clúster, en ella podemos observar que el grupo 2
+tiene un mayor número de observaciones que el resto, y el 1,4 y 5 tienen
+el mismo.</p>
+<pre class="r"><code class="hljs">set.seed(<span class="hljs-number">100</span>)
+clust3 &lt;- kmeans(df_demanda, centers = <span class="hljs-number">5</span>, nstart = <span class="hljs-number">20</span>)
+table(clust3$cluster)</code></pre>
+<pre><code class="hljs">## 
+## 1 2 3 4 5 
+## 2 3 5 5 2</code></pre>
+<pre class="r"><code class="hljs">p1 = fviz_cluster(object = list(data=df_demanda, cluster=clust3$cluster), stand = <span class="hljs-literal">FALSE</span>,
+             ellipse.type = <span class="hljs-string">"convex"</span>, geom = <span class="hljs-string">"text"</span>, show.clust.cent = <span class="hljs-literal">FALSE</span>,
+             labelsize = <span class="hljs-number">8</span>)  +
+  labs(title = <span class="hljs-string">"K-MEDIAS + Proyeccion PCA"</span>,
+       subtitle = <span class="hljs-string">"Dist euclidea, K=5"</span>) +
+  theme_bw() +
+  theme(legend.position = <span class="hljs-string">"bottom"</span>)
+p2 = fviz_cluster(object = list(data=df_demanda, cluster=clust3$cluster), stand = <span class="hljs-literal">FALSE</span>,
+             ellipse.type = <span class="hljs-string">"convex"</span>, geom = <span class="hljs-string">"text"</span>, show.clust.cent = <span class="hljs-literal">FALSE</span>,
+             labelsize = <span class="hljs-number">8</span>, axes = <span class="hljs-number">3</span>:<span class="hljs-number">4</span>)  +
+  labs(title = <span class="hljs-string">"K-MEDIAS + Proyeccion PCA"</span>,
+       subtitle = <span class="hljs-string">"Dist euclidea, K=5"</span>) +
+  theme_bw() +
+  theme(legend.position = <span class="hljs-string">"bottom"</span>)
+grid.arrange(p1, p2, nrow = <span class="hljs-number">1</span>)</code></pre>
+<p><img src="./CLUSTERING DEMANDA (OBJETIVO 2)_files/unnamed-chunk-18-1.png" width="672"></p>
+</div>
+<div id="section-método-de-kmedoides" class="section level3">
+<h3>Método de kmedoides</h3>
+<pre class="r"><code class="hljs">p1 = fviz_nbclust(x = df_demanda, FUNcluster = pam, method = <span class="hljs-string">"silhouette"</span>, 
+             k.max = <span class="hljs-number">10</span>, verbose = <span class="hljs-literal">FALSE</span>) +
+  labs(title = <span class="hljs-string">"Numero optimo de clusters"</span>)
+p2 = fviz_nbclust(x = df_demanda, FUNcluster = pam, method = <span class="hljs-string">"wss"</span>, 
+             k.max = <span class="hljs-number">10</span>, verbose = <span class="hljs-literal">FALSE</span>) +
+  labs(title = <span class="hljs-string">"Numero optimo de clusters"</span>)
+grid.arrange(p1, p2, nrow = <span class="hljs-number">1</span>)</code></pre>
+<p><img src="./CLUSTERING DEMANDA (OBJETIVO 2)_files/unnamed-chunk-19-1.png" width="672"></p>
+<p>Después de analizar tanto el gráfico de Silhouette como el de la
+variabilidad intra-cluster, hemos llegado a la conclusión de que el
+número óptimo de clústeres es 5. A pesar de que el valor de Silhouette
+para 5 clústeres es inferior al valor máximo obtenido con 2 clústeres,
+sigue siendo suficientemente alto, indicando una buena separación entre
+los clústeres. Además, el análisis de la variabilidad intra-cluster
+muestra una distancia intra-cluster muy baja para este número de
+clusteres, lo que nos informa de que la distancia entre observaciones
+dentro del cluster es muy baja. Por otra parte, vemos que para 4 la
+distancia intra-cluster es muy similar, pero el valor de Silhouette es
+menor, por lo que acabamos decidiendo 5.</p>
+<p>Esta tabla nos sirve para conocer cómo se distribuyen las
+observaciones en cada clúster, en ella podemos observar que el grupo 2
+tiene un mayor número de observaciones que el resto, y el 1,4 y 5 tienen
+el mismo.</p>
+<pre class="r"><code class="hljs">clust4 &lt;- pam(df_demanda, k = <span class="hljs-number">5</span>)
+table(clust4$clustering)</code></pre>
+<pre><code class="hljs">## 
+## 1 2 3 4 5 
+## 2 5 5 3 2</code></pre>
+<pre class="r"><code class="hljs">p1 = fviz_cluster(object = list(data=df_demanda, cluster=clust4$clustering), stand = <span class="hljs-literal">FALSE</span>,
+             ellipse.type = <span class="hljs-string">"convex"</span>, geom = <span class="hljs-string">"text"</span>, show.clust.cent = <span class="hljs-literal">FALSE</span>,
+             labelsize = <span class="hljs-number">8</span>)  +
+  labs(title = <span class="hljs-string">"K-MEDOIDES + Proyeccion PCA"</span>,
+       subtitle = <span class="hljs-string">"Dist euclidea, K=5"</span>) +
+  theme_bw() +
+  theme(legend.position = <span class="hljs-string">"bottom"</span>)
+p2 = fviz_cluster(object = list(data=df_demanda, cluster=clust4$clustering), stand = <span class="hljs-literal">FALSE</span>,
+             ellipse.type = <span class="hljs-string">"convex"</span>, geom = <span class="hljs-string">"text"</span>, show.clust.cent = <span class="hljs-literal">FALSE</span>,
+             labelsize = <span class="hljs-number">8</span>, axes = <span class="hljs-number">3</span>:<span class="hljs-number">4</span>)  +
+  labs(title = <span class="hljs-string">"K-MEDOIDES + Proyeccion PCA"</span>,
+       subtitle = <span class="hljs-string">"Dist euclidea, K=5"</span>) +
+  theme_bw() +
+  theme(legend.position = <span class="hljs-string">"bottom"</span>)
+grid.arrange(p1, p2, nrow = <span class="hljs-number">1</span>)</code></pre>
+<p><img src="./CLUSTERING DEMANDA (OBJETIVO 2)_files/unnamed-chunk-21-1.png" width="672"></p>
+<p>Después de crear el gráfico de scores para las dimensiones 1 y 2,
+podemos observar que los clusters están claramente diferenciados.
+Específicamente, la dimensión 1 contiene el 99.5% de la variabilidad, lo
+que indica que es la dimensión principal y que es suficiente para
+representar los clústeres de manera efectiva. Todo lo que vamos
+explicando queda reflejado en el barplot que hemos creado, donde la
+línea roja representa la media de valores de generación.</p>
+<p>Par analizar los clústeres iremos de derecha a izquierda en el
+gráfico, es decir, del número 3(verde) al número 1(rojo), ya que
+consideramos que seguir un orden a la hora de la explicación nos puede
+servir de guía de un patrón.</p>
+<p>En primer lugar, empezaremos explicando porque se distribuye de esta
+forma, como hemos utilizado la distancia euclídea las observaciones se
+agruparán en función de lo lejanas o cercanas que estén entre ellas. En
+este caso las que tienen un valor de demanda más grande o por encima de
+la media 0 (las rojas, azules y moradas) se encuentran situadas a la
+izquierda y las otras que son las que se encuentran por debajo de la
+media, es decir, la amarilla y la verde se encuentran a la derecha. Esto
+también lo podemos comparar con el gráfico de barras para las medias de
+las CCAA, donde podemos apreciar esto que acabamos de describir.</p>
+<p>Ahora pasaremos a analizarlos de forma individual:</p>
+<ul>
+<li><p>Cluster 1: se trata del clúster de color rojo. En este, podemos
+observar que las observaciones se encuentran ligeramente separadas entre
+ellas en la dimensión 1 y, además, se trata de las observaciones con
+mayor demanda, tal como se puede ver tanto en el dataframe como en el
+gráfico de medias. Estas observaciones corresponden a Cataluña y
+Andalucía, dos de las comunidades más grandes y pobladas de España, lo
+que contribuye a su alta demanda de energía. Esto también se refleja en
+nuestro dataframe de densidad poblacional. Cataluña tiene un importante
+sector industrial, mientras que Andalucía presenta un gran consumo
+energético debido a su extensión geográfica y la necesidad de energía
+para el turismo y la agricultura.</p></li>
+<li><p>Cluster 4: se trata del clúster de color azul. En este clúster,
+las observaciones se encuentran prácticamente juntas en la dimensión 1,
+lo que indica que están bien clasificadas. Además, estas observaciones
+tienen un valor de demanda bastante alto. Las regiones correspondientes
+a este clúster son Madrid y Comunidad Valenciana. Madrid, como centro
+económico de España, requiere una alta demanda de energía para soportar
+sus actividades comerciales, industriales y residenciales. Por otra
+parte, Comunidad Valenciana cuenta con una gran presencia industrial y
+turística, especialmente en los meses de verano, lo que aumenta
+significativamente su demanda de energía.</p></li>
+<li><p>Cluster 5: se trata del clúster de color morado/rosa. En este
+clúster, las observaciones se encuentran muy cercanas en la dimensión 1,
+lo que indica que están bien clasificadas. Estas observaciones tienen un
+valor de demanda ligeramente superior a la media, por lo que se
+consideran importantes demandantes de energía. Las regiones
+correspondientes a este clúster son País Vasco y Galicia. El País Vasco
+es una región industrial con alta actividad manufacturera y portuaria,
+lo que genera una considerable demanda de energía. Galicia, aunque más
+rural, tiene una industria pesquera y agrícola significativa, lo que
+también requiere una gran cantidad de energía.</p></li>
+<li><p>Cluster 2: se trata del clúster de color amarillo. En este
+clúster, podemos observar una mayor cantidad de observaciones en
+comparación con el anterior, todas ellas muy cercanas, lo que indica una
+buena clasificación. Estas observaciones tienen un valor de demanda
+inferior a la media, por lo que se consideran demandantes de energía
+menores. Las regiones correspondientes a este clúster son las Castillas,
+Canarias, Aragón, Asturias y Murcia. Los motivos de estos valores se
+deben principalmente a su menor densidad poblacional y a la menor
+actividad industrial. Aunque Canarias tiene una gran demanda energética
+debido a su insularidad, esta es menor comparada con otras
+regiones.</p></li>
+<li><p>Cluster 3: se trata del clúster de color verde. En este clúster,
+observamos una mayor cantidad de observaciones en comparación con el
+anterior, todas ellas muy cercanas, lo que indica una buena
+clasificación. Estas observaciones tienen un valor de demanda inferior a
+la media, lo que las posiciona como demandantes de energía menores,
+siendo las menos demandantes de toda España. Las regiones incluidas en
+este clúster son Cantabria, La Rioja, Navarra, Extremadura y Baleares.
+Estas regiones se caracterizan por tener menor densidad poblacional y
+menos actividad industrial en comparación con otras áreas del país.
+Aunque Cantabria, La Rioja y Navarra están desarrolladas, sus economías
+son más especializadas y de menor escala. Extremadura, siendo una de las
+regiones menos pobladas, tiene una demanda de energía relativamente
+baja. Por su parte, Baleares, a pesar de ser un importante destino
+turístico, presenta una demanda energética menor debido a su tamaño y la
+estacionalidad del turismo.</p></li>
+</ul>
+<pre class="r"><code class="hljs"><span class="hljs-comment"># Establecer el diseño de la grilla de gráficos</span>
+par(mfrow = c(<span class="hljs-number">1</span>,<span class="hljs-number">3</span>))
+
+<span class="hljs-comment"># Graficar coeficientes de silueta para Ward</span>
+plot(silhouette(grupos1, midist_euclidean), col = rainbow(<span class="hljs-number">5</span>), border = <span class="hljs-literal">NA</span>, main = <span class="hljs-string">"WARD"</span>)
+
+<span class="hljs-comment"># Graficar coeficientes de silueta para K-MEDIAS</span>
+plot(silhouette(clust3$cluster, midist_euclidean), col = rainbow(<span class="hljs-number">5</span>), border = <span class="hljs-literal">NA</span>, main = <span class="hljs-string">"K-MEDIAS"</span>)
+
+<span class="hljs-comment"># Graficar coeficientes de silueta para K-MEDOIDES</span>
+plot(silhouette(clust4$clustering, midist_euclidean), col = rainbow(<span class="hljs-number">5</span>), border = <span class="hljs-literal">NA</span>, main = <span class="hljs-string">"K-MEDOIDES"</span>)</code></pre>
+<p><img src="./CLUSTERING DEMANDA (OBJETIVO 2)_files/unnamed-chunk-22-1.png" width="672"></p>
+<p>Tras realizar la selección del modelo decidimos quedarnos con el
+método de k-medoides aunque k-medias tenga el mismo valor medio de
+Silhouette, debido a que k-medoides es menos sensible a los valores
+atípicos, ya que utilizan puntos reales del conjunto de datos como
+medodes, por lo que obtendremos clusters más robustos y estables.</p>
+</div>
+</div>
+<div id="section-selección-y-validación-de-modelos" class="section level2">
+<div name="Selección_y_validación_de_modelos" data-unique="Selección_y_validación_de_modelos"></div><h2>Selección y validación de modelos</h2>
+<pre class="r"><code class="hljs">misclust = factor(clust3$cluster)
+miPCA = PCA(df_demanda, scale.unit = <span class="hljs-literal">FALSE</span>, graph = <span class="hljs-literal">FALSE</span>)
+eig.val = get_eigenvalue(miPCA)
+Vmedia = <span class="hljs-number">100</span> * (<span class="hljs-number">1</span>/nrow(eig.val))
+fviz_eig(miPCA, addlabels = <span class="hljs-literal">TRUE</span>) +
+  geom_hline(yintercept=Vmedia, linetype=<span class="hljs-number">2</span>, color=<span class="hljs-string">"red"</span>)</code></pre>
+<p><img src="./CLUSTERING DEMANDA (OBJETIVO 2)_files/unnamed-chunk-23-1.png" width="672"></p>
+<p>Tras realizar la selección del modelo decidimos quedarnos con el
+método de k-medoides aunque k-medias tenga el mismo valor medio de
+Silhouette, debido a que k-medoides es menos sensible a los valores
+atípicos, ya que utilizan puntos reales del conjunto de datos como
+medodes, por lo que obtendremos clusters más robustos y estables.</p>
+</div>
+<div id="section-pca-comprobación" class="section level2">
+<div name="PCA_comprobación" data-unique="PCA_comprobación"></div><h2>PCA comprobación</h2>
+<p>A continuación, realizaremos la representación PCA para conocer mejor
+por qué se distribuyen de tal forma las dimensiones</p>
+<pre class="r"><code class="hljs">p1 = fviz_pca_ind(miPCA, geom = <span class="hljs-string">"point"</span>, habillage = misclust, addEllipses = <span class="hljs-literal">FALSE</span>)
+p2 = fviz_pca_var(miPCA)
+grid.arrange(p1, p2, nrow = <span class="hljs-number">1</span>)</code></pre>
+<p><img src="./CLUSTERING DEMANDA (OBJETIVO 2)_files/unnamed-chunk-24-1.png" width="672"></p>
+<p>Es interesante notar cómo todas las variables están representadas
+predominantemente en la dimensión 1, lo que sugiere que esta dimensión
+captura la mayor parte de la variabilidad en los datos. Aunque algunas
+variables pueden tener cierta inclinación en la dimensión 2, su
+contribución a la variabilidad total es mucho menor, como lo indica el
+3.1% de variabilidad explicada por la dimensión 2.</p>
+<p>Esta observación resalta la importancia de la dimensión 1 en la
+representación de los datos y sugiere que la mayoría de las diferencias
+entre las observaciones están capturadas por esta dimensión
+principal.</p>
+<pre class="r"><code class="hljs"><span class="hljs-comment"># Calcular medias por clúster</span>
+mediasCluster &lt;- aggregate(df_demanda, by = list(<span class="hljs-string">"cluster"</span> = misclust), mean)[,-<span class="hljs-number">1</span>]
+
+<span class="hljs-comment"># Establecer nombres de fila</span>
+rownames(mediasCluster) &lt;- paste0(<span class="hljs-string">"c"</span>, seq_len(nrow(mediasCluster)))
+
+<span class="hljs-comment"># Mostrar los resultados</span>
+kable(t(round(mediasCluster, <span class="hljs-number">2</span>)))</code></pre>
+<table class="table table-condensed">
+<thead>
+<tr class="header">
+<th align="left"></th>
+<th align="right">c1</th>
+<th align="right">c2</th>
+<th align="right">c3</th>
+<th align="right">c4</th>
+<th align="right">c5</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">2013T1</td>
+<td align="right">1118652.1</td>
+<td align="right">159309.49</td>
+<td align="right">-968115.3</td>
+<td align="right">-490933.1</td>
+<td align="right">2290005</td>
+</tr>
+<tr class="even">
+<td align="left">2013T2</td>
+<td align="right">922288.2</td>
+<td align="right">142987.66</td>
+<td align="right">-865986.5</td>
+<td align="right">-423213.1</td>
+<td align="right">2086229</td>
+</tr>
+<tr class="odd">
+<td align="left">2013T3</td>
+<td align="right">1031922.3</td>
+<td align="right">18723.69</td>
+<td align="right">-909011.7</td>
+<td align="right">-456283.4</td>
+<td align="right">2353230</td>
+</tr>
+<tr class="even">
+<td align="left">2013T4</td>
+<td align="right">1063343.9</td>
+<td align="right">139935.15</td>
+<td align="right">-932969.3</td>
+<td align="right">-461522.2</td>
+<td align="right">2212982</td>
+</tr>
+<tr class="odd">
+<td align="left">2014T1</td>
+<td align="right">1061385.1</td>
+<td align="right">173397.67</td>
+<td align="right">-958210.7</td>
+<td align="right">-477305.0</td>
+<td align="right">2267307</td>
+</tr>
+<tr class="even">
+<td align="left">2014T2</td>
+<td align="right">891761.5</td>
+<td align="right">144681.56</td>
+<td align="right">-864947.4</td>
+<td align="right">-406028.4</td>
+<td align="right">2068656</td>
+</tr>
+<tr class="odd">
+<td align="left">2014T3</td>
+<td align="right">1025638.9</td>
+<td align="right">36560.80</td>
+<td align="right">-904727.2</td>
+<td align="right">-447520.5</td>
+<td align="right">2300139</td>
+</tr>
+<tr class="even">
+<td align="left">2014T4</td>
+<td align="right">1006214.7</td>
+<td align="right">164981.16</td>
+<td align="right">-917440.2</td>
+<td align="right">-446201.4</td>
+<td align="right">2155418</td>
+</tr>
+<tr class="odd">
+<td align="left">2015T1</td>
+<td align="right">1093194.8</td>
+<td align="right">177570.84</td>
+<td align="right">-974992.2</td>
+<td align="right">-488070.7</td>
+<td align="right">2298106</td>
+</tr>
+<tr class="even">
+<td align="left">2015T2</td>
+<td align="right">930823.1</td>
+<td align="right">133803.28</td>
+<td align="right">-882099.0</td>
+<td align="right">-423979.0</td>
+<td align="right">2133667</td>
+</tr>
+<tr class="odd">
+<td align="left">2015T3</td>
+<td align="right">1087006.2</td>
+<td align="right">5720.59</td>
+<td align="right">-943109.6</td>
+<td align="right">-472162.8</td>
+<td align="right">2442594</td>
+</tr>
+<tr class="even">
+<td align="left">2015T4</td>
+<td align="right">988052.4</td>
+<td align="right">152432.76</td>
+<td align="right">-916521.9</td>
+<td align="right">-436656.2</td>
+<td align="right">2166244</td>
+</tr>
+<tr class="odd">
+<td align="left">2016T1</td>
+<td align="right">1081968.4</td>
+<td align="right">161049.96</td>
+<td align="right">-966006.2</td>
+<td align="right">-472919.4</td>
+<td align="right">2273771</td>
+</tr>
+<tr class="even">
+<td align="left">2016T2</td>
+<td align="right">950563.1</td>
+<td align="right">121891.94</td>
+<td align="right">-891248.3</td>
+<td align="right">-427030.6</td>
+<td align="right">2162296</td>
+</tr>
+<tr class="odd">
+<td align="left">2016T3</td>
+<td align="right">1064770.9</td>
+<td align="right">-24213.72</td>
+<td align="right">-948801.4</td>
+<td align="right">-470008.1</td>
+<td align="right">2518573</td>
+</tr>
+<tr class="even">
+<td align="left">2016T4</td>
+<td align="right">1001487.2</td>
+<td align="right">133427.70</td>
+<td align="right">-931248.6</td>
+<td align="right">-449919.2</td>
+<td align="right">2251291</td>
+</tr>
+<tr class="odd">
+<td align="left">2017T1</td>
+<td align="right">1059827.5</td>
+<td align="right">148479.91</td>
+<td align="right">-966055.7</td>
+<td align="right">-478510.0</td>
+<td align="right">2328867</td>
+</tr>
+<tr class="even">
+<td align="left">2017T2</td>
+<td align="right">935128.0</td>
+<td align="right">98631.48</td>
+<td align="right">-903413.2</td>
+<td align="right">-429172.4</td>
+<td align="right">2248389</td>
+</tr>
+<tr class="odd">
+<td align="left">2017T3</td>
+<td align="right">1024860.9</td>
+<td align="right">-12840.51</td>
+<td align="right">-944988.6</td>
+<td align="right">-464733.1</td>
+<td align="right">2518704</td>
+</tr>
+<tr class="even">
+<td align="left">2017T4</td>
+<td align="right">993954.5</td>
+<td align="right">131038.54</td>
+<td align="right">-951673.7</td>
+<td align="right">-453171.3</td>
+<td align="right">2321600</td>
+</tr>
+<tr class="odd">
+<td align="left">2018T1</td>
+<td align="right">1093845.7</td>
+<td align="right">154131.92</td>
+<td align="right">-995108.0</td>
+<td align="right">-494267.2</td>
+<td align="right">2398394</td>
+</tr>
+<tr class="even">
+<td align="left">2018T2</td>
+<td align="right">920709.6</td>
+<td align="right">137027.56</td>
+<td align="right">-899050.4</td>
+<td align="right">-420575.9</td>
+<td align="right">2172815</td>
+</tr>
+<tr class="odd">
+<td align="left">2018T3</td>
+<td align="right">1065401.4</td>
+<td align="right">-5524.02</td>
+<td align="right">-951618.5</td>
+<td align="right">-468393.9</td>
+<td align="right">2492915</td>
+</tr>
+<tr class="even">
+<td align="left">2018T4</td>
+<td align="right">990751.2</td>
+<td align="right">136913.26</td>
+<td align="right">-937397.6</td>
+<td align="right">-442839.0</td>
+<td align="right">2254471</td>
+</tr>
+<tr class="odd">
+<td align="left">2019T1</td>
+<td align="right">1049786.1</td>
+<td align="right">114192.34</td>
+<td align="right">-967013.1</td>
+<td align="right">-462265.3</td>
+<td align="right">2352122</td>
+</tr>
+<tr class="even">
+<td align="left">2019T2</td>
+<td align="right">936382.2</td>
+<td align="right">83442.92</td>
+<td align="right">-878291.0</td>
+<td align="right">-419315.6</td>
+<td align="right">2182470</td>
+</tr>
+<tr class="odd">
+<td align="left">2019T3</td>
+<td align="right">1077280.9</td>
+<td align="right">-50530.40</td>
+<td align="right">-932019.5</td>
+<td align="right">-466464.4</td>
+<td align="right">2494724</td>
+</tr>
+<tr class="even">
+<td align="left">2019T4</td>
+<td align="right">1032811.8</td>
+<td align="right">106683.02</td>
+<td align="right">-929264.8</td>
+<td align="right">-456697.8</td>
+<td align="right">2272070</td>
+</tr>
+<tr class="odd">
+<td align="left">2020T1</td>
+<td align="right">1062084.6</td>
+<td align="right">94435.70</td>
+<td align="right">-937165.4</td>
+<td align="right">-459259.7</td>
+<td align="right">2287325</td>
+</tr>
+<tr class="even">
+<td align="left">2020T2</td>
+<td align="right">788660.2</td>
+<td align="right">61566.49</td>
+<td align="right">-777389.4</td>
+<td align="right">-351790.1</td>
+<td align="right">1941939</td>
+</tr>
+<tr class="odd">
+<td align="left">2020T3</td>
+<td align="right">1030050.1</td>
+<td align="right">-60598.76</td>
+<td align="right">-918861.3</td>
+<td align="right">-450799.5</td>
+<td align="right">2485000</td>
+</tr>
+<tr class="even">
+<td align="left">2020T4</td>
+<td align="right">1019359.8</td>
+<td align="right">96310.28</td>
+<td align="right">-910730.7</td>
+<td align="right">-449741.6</td>
+<td align="right">2237356</td>
+</tr>
+<tr class="odd">
+<td align="left">2021T1</td>
+<td align="right">1075550.4</td>
+<td align="right">101919.97</td>
+<td align="right">-941785.5</td>
+<td align="right">-477731.6</td>
+<td align="right">2320362</td>
+</tr>
+<tr class="even">
+<td align="left">2021T2</td>
+<td align="right">918336.2</td>
+<td align="right">81678.97</td>
+<td align="right">-856614.1</td>
+<td align="right">-405281.4</td>
+<td align="right">2113884</td>
+</tr>
+<tr class="odd">
+<td align="left">2021T3</td>
+<td align="right">1027031.0</td>
+<td align="right">-49426.58</td>
+<td align="right">-905689.1</td>
+<td align="right">-437044.7</td>
+<td align="right">2403944</td>
+</tr>
+<tr class="even">
+<td align="left">2021T4</td>
+<td align="right">1007434.7</td>
+<td align="right">75974.87</td>
+<td align="right">-900150.9</td>
+<td align="right">-429115.4</td>
+<td align="right">2201769</td>
+</tr>
+<tr class="odd">
+<td align="left">2022T1</td>
+<td align="right">1108685.0</td>
+<td align="right">1282.43</td>
+<td align="right">-911457.6</td>
+<td align="right">-444711.4</td>
+<td align="right">2279814</td>
+</tr>
+<tr class="even">
+<td align="left">2022T2</td>
+<td align="right">978588.9</td>
+<td align="right">-11402.49</td>
+<td align="right">-848310.2</td>
+<td align="right">-407349.2</td>
+<td align="right">2177663</td>
+</tr>
+<tr class="odd">
+<td align="left">2022T3</td>
+<td align="right">1135734.2</td>
+<td align="right">-176180.16</td>
+<td align="right">-899308.1</td>
+<td align="right">-442544.4</td>
+<td align="right">2483167</td>
+</tr>
+<tr class="even">
+<td align="left">2022T4</td>
+<td align="right">969703.7</td>
+<td align="right">-12363.46</td>
+<td align="right">-834389.8</td>
+<td align="right">-386079.8</td>
+<td align="right">2100016</td>
+</tr>
+<tr class="odd">
+<td align="left">2023T1</td>
+<td align="right">1084737.3</td>
+<td align="right">-12001.44</td>
+<td align="right">-893678.1</td>
+<td align="right">-434888.8</td>
+<td align="right">2254682</td>
+</tr>
+<tr class="even">
+<td align="left">2023T2</td>
+<td align="right">891446.0</td>
+<td align="right">-23990.38</td>
+<td align="right">-796987.3</td>
+<td align="right">-374227.5</td>
+<td align="right">2072576</td>
+</tr>
+<tr class="odd">
+<td align="left">2023T3</td>
+<td align="right">1106721.2</td>
+<td align="right">-185152.01</td>
+<td align="right">-875771.6</td>
+<td align="right">-433386.6</td>
+<td align="right">2443902</td>
+</tr>
+<tr class="even">
+<td align="left">2023T4</td>
+<td align="right">1040738.2</td>
+<td align="right">-23250.24</td>
+<td align="right">-861530.1</td>
+<td align="right">-403705.6</td>
+<td align="right">2157226</td>
+</tr>
+</tbody>
+</table>
+<pre class="r"><code class="hljs">matplot(t(mediasCluster), type = <span class="hljs-string">"l"</span>, col = rainbow(<span class="hljs-number">5</span>), ylab = <span class="hljs-string">""</span>, xlab = <span class="hljs-string">""</span>, lwd = <span class="hljs-number">2</span>,
+        lty = <span class="hljs-number">1</span>, main = <span class="hljs-string">"Perfil medio de los clusters"</span>, xaxt = <span class="hljs-string">"n"</span>)
+axis(side = <span class="hljs-number">1</span>, at = <span class="hljs-number">1</span>:ncol(df_demanda), labels = colnames(df_demanda), las = <span class="hljs-number">2</span>)
+legend(<span class="hljs-string">"topleft"</span>, as.character(<span class="hljs-number">1</span>:<span class="hljs-number">5</span>), col = rainbow(<span class="hljs-number">5</span>), lwd = <span class="hljs-number">2</span>, ncol = <span class="hljs-number">3</span>, bty = <span class="hljs-string">"n"</span>)</code></pre>
+<p><img src="./CLUSTERING DEMANDA (OBJETIVO 2)_files/unnamed-chunk-26-1.png" width="672"></p>
+<p>El gráfico muestra el perfil medio de los clústeres en términos de
+demanda energética desde el primer trimestre de 2013 hasta el tercer
+trimestre de 2023. Los clústeres están representados por diferentes
+colores y líneas, cada uno reflejando un patrón de demanda
+específico.</p>
+<ol style="list-style-type: decimal">
+<li><p><strong>Clúster 1 (Línea Morada):</strong> Este clúster tiene la
+mayor demanda energética, con valores que se mantienen altos a lo largo
+del tiempo. La línea muestra fluctuaciones significativas, lo que indica
+variaciones estacionales o cambios en la actividad económica que afectan
+la demanda de energía.</p></li>
+<li><p><strong>Clúster 2 (Línea Roja):</strong> Este clúster presenta
+una demanda energética considerablemente menor que el clúster 1, pero
+estable y consistente en el tiempo. Las variaciones son menores
+comparadas con el clúster 1, lo que sugiere una demanda más predecible y
+constante.</p></li>
+<li><p><strong>Clúster 3 (Línea Amarilla):</strong> Representa un nivel
+de demanda aún más bajo que el clúster 2. Las observaciones son bastante
+consistentes a lo largo del tiempo, lo que indica un patrón de consumo
+de energía regular y posiblemente asociado a regiones con menor
+actividad industrial y densidad poblacional, como se mencionó
+previamente en la descripción de las regiones del clúster
+amarillo.</p></li>
+<li><p><strong>Clúster 4 (Línea Azul):</strong> Este clúster tiene la
+menor demanda energética de todos los clústeres representados en el
+gráfico. La línea azul muestra una estabilidad notable con pocas
+fluctuaciones, lo que podría corresponder a regiones con muy baja
+actividad económica o densidad poblacional.</p></li>
+<li><p><strong>Clúster 5 (Línea Verde):</strong> Aunque no fue detallado
+anteriormente, la línea verde representa un perfil de demanda energético
+que se sitúa entre los valores del clúster 3 y el clúster 4. Esta línea
+muestra más variabilidad que la línea azul pero menos que la línea
+amarilla, sugiriendo una combinación de regiones con diferentes niveles
+de consumo energético.</p></li>
+</ol>
+</div>
+<div id="section-representación-mapa-de-españa" class="section level2">
+<div name="Representación_Mapa_de_España" data-unique="Representación_Mapa_de_España"></div><h2>Representación Mapa de España</h2>
+<p>Ahora lo que vamos a hacer es una representación del mejor método en
+un mapa de España, donde aparecerán las diferentes CCAA coloreadas en
+función del cluster al que pertenecen. De este modo será más visual y
+entendible cada una de las conclusiones que hemos ido extrayendo en los
+anteriores apartados.</p>
+<pre class="r"><code class="hljs">datos = as.data.frame(clust4$clustering)
+colnames(datos)[colnames(datos) == <span class="hljs-string">"clust4$clustering"</span>] &lt;- <span class="hljs-string">"grupos1"</span>
+  ccaa2 = c(<span class="hljs-string">"Andalucía"</span>, <span class="hljs-string">"Aragón"</span>, <span class="hljs-string">"Asturias, Principado de"</span>, <span class="hljs-string">"Balears, Illes"</span>, <span class="hljs-string">"Canarias"</span>, <span class="hljs-string">"Cantabria"</span>, <span class="hljs-string">"Castilla - La Mancha"</span>, <span class="hljs-string">"Castilla y León"</span>, <span class="hljs-string">"Cataluña"</span>, <span class="hljs-string">"Comunitat Valenciana"</span>, <span class="hljs-string">"Extremadura"</span>, <span class="hljs-string">"Galicia"</span>, <span class="hljs-string">"Madrid, Comunidad de"</span>, <span class="hljs-string">"Murcia, Región de"</span>, <span class="hljs-string">"Navarra, Comunidad Foral de"</span>, <span class="hljs-string">"País Vasco"</span>, <span class="hljs-string">"Rioja, La"</span>)
+
+rownames(datos)&lt;- <span class="hljs-literal">NULL</span>
+datos &lt;- cbind(datos,ccaa2)</code></pre>
+<pre class="r"><code class="hljs"><span class="hljs-comment">#Qué diferencias hay entre cada </span>
+<span class="hljs-comment">#Extreaemos la información necesaria para poder hacer el mapa de España con figuras</span>
+<span class="hljs-comment">#gracias a la función esp_get_ccaa() de la librería mapSpain. En el dataframe obtenido</span>
+<span class="hljs-comment">#tenemos la columna geometry que es con la que plotearemos la geografía española</span>
+ccaa &lt;- esp_get_ccaa()
+ccaa &lt;- ccaa[,c(<span class="hljs-string">"ine.ccaa.name"</span>, <span class="hljs-string">"geometry"</span>)]
+<span class="hljs-comment">#Como también incluye Canarias, sacamos una cajita que las contenga </span>
+<span class="hljs-comment">#para que quede mejor el gráfico</span>
+can_box &lt;- esp_get_can_box()
+
+ceuta_melilla = data.frame(
+  grupos1 = c(<span class="hljs-literal">NA</span>,<span class="hljs-literal">NA</span>),
+  ccaa2 = c(<span class="hljs-string">"Ceuta"</span>, <span class="hljs-string">"Melilla"</span>)
+)
+
+datos &lt;- rbind(datos, ceuta_melilla)
+
+ui &lt;- fluidPage(
+  titlePanel(<span class="hljs-string">"Clusters para demanda por ccaa"</span>),
+    mainPanel(
+      <span class="hljs-comment"># Agregar el gráfico del mapa</span>
+      plotlyOutput(<span class="hljs-string">"map_plot"</span>)
+    )
+  )
+
+
+server &lt;- <span class="hljs-keyword">function</span>(input, output) {
+  output$map_plot &lt;- renderPlotly({
+    ccaa &lt;- merge(ccaa, datos, by.x = <span class="hljs-string">"ine.ccaa.name"</span>, by.y = <span class="hljs-string">"ccaa2"</span>, all.x = <span class="hljs-literal">TRUE</span>)
+    <span class="hljs-comment"># Crear el mapa de España con Plotly</span>
+    p &lt;- ggplot(ccaa) +
+      geom_sf(aes(fill = factor(grupos1)), color = <span class="hljs-literal">NA</span>) +  <span class="hljs-comment"># Eliminar las líneas de los polígonos</span>
+      scale_fill_manual(values = c(<span class="hljs-string">"1"</span> = <span class="hljs-string">"#4E79A7"</span>, <span class="hljs-string">"2"</span> = <span class="hljs-string">"#6EB5A2"</span>, <span class="hljs-string">"3"</span> = <span class="hljs-string">"#A18F7E"</span>, <span class="hljs-string">"4"</span> = <span class="hljs-string">"#84A390"</span>,<span class="hljs-string">"5"</span>=<span class="hljs-string">"#D6B6C7"</span>),name=<span class="hljs-string">"Clusters"</span>) +  <span class="hljs-comment"># Definir colores manuales</span>
+      geom_sf_text(aes(label = ine.ccaa.name), size = <span class="hljs-number">2</span>, color = <span class="hljs-string">"black"</span>) +
+      geom_sf(data = can_box, inherit.aes = <span class="hljs-literal">FALSE</span>) +
+      theme_void() +  <span class="hljs-comment"># Eliminar grados y otros elementos de los ejes</span>
+      theme(legend.position = <span class="hljs-string">"bottom"</span>)  <span class="hljs-comment"># Opcional: Colocar la leyenda en la parte inferior</span>
+    
+    <span class="hljs-comment"># Convertir el objeto ggplot a un gráfico interactivo de Plotly</span>
+    ggplotly(p)
+  })
+}
+shinyApp(ui = ui, server = server)</code></pre>
+<iframe width="100%" height="400" class="shiny-frame" src="./CLUSTERING DEMANDA (OBJETIVO 2)_files/saved_resource.html"></iframe>
+</div>
+</div>
+
+
+
+<div class="tocify-extend-page" data-unique="tocify-extend-page" style="height: 860px;"></div></div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("section-TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+
+<script>
+$(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = false;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#section-TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "mathjax-local/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+
+</div>
+  </div>
+
+
+</body></html>

@@ -1,0 +1,322 @@
+---
+title: "RegresionEsp"
+output: html_document
+date: "2024-04-26"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+Gracias al analisis exploratorio de los datos, ya sabemos que variables son significativas y cuales no, por lo que cargamos los datos del test, los del entrenamiento y los totales,  y creamos el modelo de regresion:
+```{r}
+library(gridExtra)
+todos="DATOS OBJ 4/datos_proy.csv"
+datostodos=read.csv(todos)
+españa="DATOS OBJ 4/datosespaña_test.csv"
+datosespaña=read.csv(españa)
+origesp=datosespaña
+predecir="DATOS OBJ 4/pruebaesa.csv"
+datospredecir=read.csv(predecir)
+datosespaña$FECHA <- as.Date(datosespaña$Fecha, format="%d/%m/%Y")
+datospredecir$FECHA <- as.Date(datospredecir$Fecha, format="%d/%m/%Y")  
+columnas_energia <- c("hidraulica", "turbinacion.bombeo", "NUCLEAR", "carbon", 
+                      "diesel", "turbina.de.gas", "turbina.de.vapor", "ciclo.combinado", 
+                      "eolica", "solar.fotovoltaica", "solar.termica", "otras.renovables", 
+                      "cogeneracion")
+nuevo_data <- data.frame(matrix(ncol = length(columnas_energia), nrow = nrow(origesp)))
+nuevo_data2 <- data.frame(matrix(ncol = length(columnas_energia), nrow = nrow(datospredecir)))
+# Asignar nombres a las columnas
+names(nuevo_data) <- c( columnas_energia)
+names(nuevo_data2) <- c( columnas_energia)
+for (col in columnas_energia) {
+  nuevo_data[[col]] <- origesp[[col]] / sum(origesp[[col]])
+}
+for (col in columnas_energia) {
+  nuevo_data2[[col]] <- datospredecir[[col]] / sum(datospredecir[[col]])
+}
+nuevo_data=cbind(nuevo_data,origesp$DEMANDA)
+nuevo_data=cbind(nuevo_data,origesp$PRECIO)
+nuevo_data<-cbind(nuevo_data,origesp$Fecha)
+nuevo_data2=cbind(nuevo_data2,datospredecir$DEMANDA)
+nuevo_data2=cbind(nuevo_data2,datospredecir$PRECIO)
+nuevo_data2<-cbind(nuevo_data2,datospredecir$Fecha)
+
+precio_ant <- c(0, head(origesp$PRECIO, -1))
+nuevo_data=nuevo_data<-cbind(nuevo_data,precio_ant)
+demanda_ant = c(0,head(origesp$DEMANDA,-1))
+nuevo_data=nuevo_data=cbind(nuevo_data,demanda_ant)
+precio_antS <- c(0,0,0,0,0,0,0,head(origesp$PRECIO, -7))
+nuevo_data=nuevo_data<-cbind(nuevo_data,precio_antS)
+demanda_antS = c(0,0,0,0,0,0,0,head(origesp$DEMANDA,-7))
+nuevo_data=nuevo_data=cbind(nuevo_data,demanda_antS)
+precio_ant2 <- c(0,0,head(origesp$PRECIO, -2))
+nuevo_data=nuevo_data<-cbind(nuevo_data,precio_ant2)
+demanda_ant2 = c(0,0,head(origesp$DEMANDA,-2))
+nuevo_data=nuevo_data=cbind(nuevo_data,demanda_ant2)
+precio_ant <- c(0, head(datospredecir$PRECIO, -1))
+nuevo_data2 <- cbind(nuevo_data2, precio_ant)
+demanda_ant = c(0, head(datospredecir$DEMANDA, -1))
+nuevo_data2 <- cbind(nuevo_data2, demanda_ant)
+precio_antS <- c(0, 0, 0, 0, 0, 0, 0, head(datospredecir$PRECIO, -7))
+nuevo_data2 <- cbind(nuevo_data2, precio_antS)
+demanda_antS = c(0, 0, 0, 0, 0, 0, 0, head(datospredecir$DEMANDA, -7))
+nuevo_data2 <- cbind(nuevo_data2, demanda_antS)
+precio_ant2 <- c(0, 0, head(datospredecir$PRECIO, -2))
+nuevo_data2 <- cbind(nuevo_data2, precio_ant2)
+demanda_ant2 = c(0, 0, head(datospredecir$DEMANDA, -2))
+nuevo_data2 <- cbind(nuevo_data2, demanda_ant2)
+tablas_analiz=c("hidraulica_ant", "turbinacion.bombeo_ant", "NUCLEAR_ant", "carbon_ant", 
+                      "diesel_ant", "turbina.de.gas_ant", "turbina.de.vapor_ant", "ciclo.combinado_ant", 
+                      "eolica_ant", "solar.fotovoltaica_ant", "solar.termica_ant", "otras.renovables_ant", 
+                      "cogeneracion_ant", "precio_ant","demanda_ant","precio_antS","demanda_antS","precio_ant2","demanda_ant2")
+for (col in columnas_energia) {
+  nuevo_data[[paste0(col, "_ant")]] <- c(0, head(nuevo_data[[col]], -1))
+}
+for (col in columnas_energia) {
+  nuevo_data2[[paste0(col, "_ant")]] <- c(0, head(nuevo_data2[[col]], -1))
+}
+nuevo_data_subset <- nuevo_data[, tablas_analiz]
+modelo <- lm(nuevo_data$`origesp$PRECIO` ~ ., data = nuevo_data_subset)
+summary(modelo)
+columnas_sin_diesel <- setdiff(tablas_analiz, "diesel_ant")
+columnas_sin_diesel_y_tbv <- setdiff(columnas_sin_diesel, "turbina.de.vapor_ant")
+columnas_sin_diesel_y_tbv_y_cog <- setdiff(columnas_sin_diesel_y_tbv, "cogeneracion_ant")
+columnas_sin_diesel_y_tbv_y_cog_y_nuc <- setdiff(columnas_sin_diesel_y_tbv_y_cog, "NUCLEAR_ant")
+columnas_sin_diesel_y_tbv_y_cog_y_nuc_y_solt <- setdiff(columnas_sin_diesel_y_tbv_y_cog_y_nuc, "solar.termica_ant")
+columnas_sin_diesel_y_tbv_y_cog_y_nuc_y_solt_y_tbg <- setdiff(columnas_sin_diesel_y_tbv_y_cog_y_nuc_y_solt, "turbina.de.gas_ant")
+columnas_sin_diesel_y_tbv_y_cog_y_nuc_y_solt_y_tbg_y_otr <- setdiff(columnas_sin_diesel_y_tbv_y_cog_y_nuc_y_solt_y_tbg, "otras.renovables_ant")
+columnas_sin_diesel_y_tbv_y_cog_y_nuc_y_solt_y_tbg_y_otr_y_pa2 <- setdiff(columnas_sin_diesel_y_tbv_y_cog_y_nuc_y_solt_y_tbg_y_otr, "precio_ant2")
+columnas_sin_diesel_y_tbv_y_cog_y_nuc_y_solt_y_tbg_y_otr_y_pa2_y_hid <- setdiff(columnas_sin_diesel_y_tbv_y_cog_y_nuc_y_solt_y_tbg_y_otr_y_pa2, "hidraulica_ant")
+
+nuevo_data_subset <- nuevo_data[, columnas_sin_diesel_y_tbv_y_cog_y_nuc_y_solt_y_tbg_y_otr_y_pa2_y_hid]
+modelo <- lm(nuevo_data$`origesp$PRECIO` ~ ., data = nuevo_data_subset)
+
+# Mostrar el resumen del modelo
+summary(modelo)
+predicciones <- predict(modelo, nuevo_data2)
+print(predicciones)
+```
+
+Como podemos ver, todos los parametros son significativos, por lo que vamos a comparar los datos recopilados por el modelo, con los reales y a graficarlo:
+```{r}
+datostodos$Fecha <- as.Date(datostodos$Fecha, format="%m/%d/%Y")
+
+## Combina las predicciones con los datos originales
+datos_predichos <- data.frame(Fecha = datospredecir$Fecha, PRECIO = predicciones, Tipo = "Predicciones")
+reales <- data.frame(Fecha = nuevo_data$`origesp$Fecha`, PRECIO = nuevo_data$`origesp$PRECIO`, Tipo = "Entrenamiento")
+reales_todos <- data.frame(Fecha = datostodos$Fecha, PRECIO = datostodos$PRECIO, Tipo = "Reales")
+
+# Convertir Fecha a tipo Date con formato específico
+datos_predichos$Fecha <- as.Date(datos_predichos$Fecha, format="%m/%d/%Y")
+reales$Fecha <- as.Date(reales$Fecha, format="%m/%d/%Y")
+
+# El resto de tu código permanece sin cambios
+datos_completos <- rbind(reales, datos_predichos)
+# Carga la librería ggplot2
+library(ggplot2)
+
+# Crea el gráfico
+g1=ggplot(datos_completos, aes(x = Fecha, y = PRECIO, color = Tipo)) +
+  geom_line() +
+  labs(x = "Fecha", y = "PRECIO", title = "Comparación de las predicciones del modelo con los datos de entrenamiento") +
+  scale_color_manual(values = c("Entrenamiento" = "red", "Predicciones" = "blue"))
+plot(g1)
+
+fecha_inicio_predicciones <- min(datos_predichos$Fecha)
+reales_todos <- reales_todos[reales_todos$Fecha >= fecha_inicio_predicciones, ]
+
+# Combina los datos reales recortados con las predicciones
+datos_completos2 <- rbind(datos_predichos, reales_todos)
+
+# Crea el gráfico
+g2=ggplot(datos_completos2, aes(x = Fecha, y = PRECIO, color = Tipo)) +
+  geom_line() +
+  labs(x = "Fecha", y = "PRECIO", title = "Comparación de las predicciones del modelo con los datos reales") +
+  scale_color_manual(values = c("Reales" = "yellow", "Predicciones" = "blue"))
+
+plot(g2)
+```
+Nuestro modelo parece que se ajusta bastante bien, ahora graficaremos la diferencia en valores absolutos:
+```{r}
+# Asegúrate de que los datos estén ordenados por fecha
+datos_predichos <- datos_predichos[order(datos_predichos$Fecha), ]
+reales_todos <- reales_todos[order(reales_todos$Fecha), ]
+
+# Combina los datos reales y las predicciones en un solo dataframe
+comparacion <- merge(datos_predichos, reales_todos, by = "Fecha", suffixes = c("_pred", "_real"))
+
+# Calcula la diferencia en valor absoluto entre los datos reales y las predicciones
+comparacion$Diferencia <- abs(comparacion$PRECIO_pred - comparacion$PRECIO_real)
+
+# Crea un dataframe para el gráfico
+datos_grafico <- data.frame(Fecha = comparacion$Fecha, Diferencia = comparacion$Diferencia)
+
+# Crea el gráfico
+g3=ggplot(datos_grafico, aes(x = Fecha, y = Diferencia)) +
+  geom_line(color = "orange") +
+  labs(x = "Fecha", y = "Diferencia Absoluta", title = "Diferencia Absoluta entre los Datos Reales y las Predicciones")
+plot(g3)
+
+```
+Ahora calcularemos el error medio cuadratico de nuesto modelo:
+```{r}
+# Ordena los datos predichos y los datos reales por fecha
+datos_predichos <- datos_predichos[order(datos_predichos$Fecha), ]
+reales_todos <- reales_todos[order(reales_todos$Fecha), ]
+
+# Combina los datos reales y las predicciones en un solo dataframe
+comparacion <- merge(datos_predichos, reales_todos, by = "Fecha", suffixes = c("_pred", "_real"))
+
+# Calcula la diferencia al cuadrado entre los datos reales y las predicciones
+comparacion$Diferencia <- (comparacion$PRECIO_pred - comparacion$PRECIO_real)^2
+
+# Calcula el error cuadrático medio (MSE)
+mse <- mean(comparacion$Diferencia)
+
+# Imprime el MSE
+print(mse)
+```
+Esto es un modelo trivial de la media del mes para predecir los datos, y ver como se ajusta, como es una serie temporal, no se ajusta muy bien, pero cumple su funcion mas o menos:
+```{r}
+# Ordena el dataframe por fecha
+reales_todos <- reales_todos[order(reales_todos$Fecha), ]
+
+# Crea una nueva columna con la media de los precios de los 30 días anteriores
+reales_todos$PRECIO_30_dias_anterior <- sapply(1:nrow(reales_todos), function(i) {
+  if(i < 30) return(NA)
+  mean(reales_todos$PRECIO[(i-29):i])
+})
+
+# Elimina las primeras filas (que ahora tienen NA para PRECIO_30_dias_anterior)
+reales_todos <- reales_todos[-c(1:29), ]
+
+# Combina los datos reales y las predicciones en un solo dataframe
+comparacion <- merge(datos_predichos, reales_todos, by = "Fecha")
+
+# Crea un dataframe para el gráfico
+datos_grafico <- data.frame(Fecha = comparacion$Fecha, PRECIO_pred = comparacion$PRECIO.x, PRECIO_30_dias_anterior = comparacion$PRECIO_30_dias_anterior)
+
+# Crea el gráfico
+g6=ggplot(datos_grafico, aes(x = Fecha)) +
+  geom_line(aes(y = PRECIO_pred, color = "Predicciones")) +
+  geom_line(aes(y = PRECIO_30_dias_anterior, color = "Media de los reales de los 30 días anteriores")) +
+  labs(x = "Fecha", y = "PRECIO", title = "Predicciones del Modelo con la Media de los Precios Reales de los 30 Días Anteriores") +
+  scale_color_manual(values = c("Predicciones" = "blue", "Media de los reales de los 30 días anteriores" = "red"))
+plot(g6)
+head(comparacion)
+
+```
+Aqui miramos la diferencia en valor absoluto de los del modelo trivial con los reales, y comparamos las diferencias de ambos modelos predictivos:
+```{r}
+# Calcula la diferencia en valor absoluto entre los datos reales y la media de los precios de los 30 días anteriores
+comparacion$Diferencia_absoluta <- abs(comparacion$PRECIO.y - comparacion$PRECIO_30_dias_anterior)
+
+# Crea un dataframe para el gráfico
+datos_grafico <- data.frame(Fecha = comparacion$Fecha, Diferencia = comparacion$Diferencia_absoluta)
+
+# Crea el gráfico
+g7=ggplot(datos_grafico, aes(x = Fecha, y = Diferencia)) +
+  geom_line(color = "blue") +
+  labs(x = "Fecha", y = "Diferencia Absoluta", title = "Diferencia Absoluta entre los Datos Reales y la Media de los Precios de los 30 Días Anteriores")
+plot(g7)
+
+# Calcula la diferencia al cuadrado entre los datos reales y la media de los precios de los 30 días anteriores
+comparacion$Diferencia_cuadrada <- (comparacion$PRECIO.y - comparacion$PRECIO_30_dias_anterior)^2
+
+# Calcula el error cuadrático medio (MSE)
+mse <- mean(comparacion$Diferencia_cuadrada)
+
+# Imprime el MSE
+print(mse)
+# Para el primer gráfico
+g3 <- g3 + ylim(0, 300)
+
+# Para el segundo gráfico
+g7 <- g7 + ylim(0, 300)
+
+
+grid.arrange(g3,g7,ncol=1)
+
+```
+
+Aqui lo hacemos con los de la semana (otro modelo trivial) y seguimos viendo que nuestro modelo se ajusta mejor:
+
+```{r}
+# Asegúrate de que los datos estén ordenados por fecha
+reales_todos <- reales_todos[order(reales_todos$Fecha), ]
+
+# Crea una nueva columna con la media de los precios de la semana anterior
+reales_todos$PRECIO_semana_anterior <- sapply(1:nrow(reales_todos), function(i) {
+  if(i < 7) return(NA)
+  mean(reales_todos$PRECIO[(i-6):i])
+})
+
+# Elimina las primeras filas (que ahora tienen NA para PRECIO_semana_anterior)
+reales_todos <- reales_todos[-c(1:6), ]
+
+# Combina los datos reales y las predicciones en un solo dataframe
+comparacion <- merge(datos_predichos, reales_todos, by = "Fecha")
+
+# Crea un dataframe para el gráfico
+datos_grafico <- data.frame(Fecha = comparacion$Fecha, PRECIO_pred = comparacion$PRECIO.x, PRECIO_semana_anterior = comparacion$PRECIO_semana_anterior)
+
+# Crea el gráfico
+g6=ggplot(datos_grafico, aes(x = Fecha)) +
+  geom_line(aes(y = PRECIO_pred, color = "Predicciones")) +
+  geom_line(aes(y = PRECIO_semana_anterior, color = "Media de los reales de la semana anterior")) +
+  labs(x = "Fecha", y = "PRECIO", title = "Comparación de las Predicciones del Modelo con la Media de los Precios Reales de la Semana Anterior") +
+  scale_color_manual(values = c("Predicciones" = "blue", "Media de los reales de la semana anterior" = "green"))
+plot(g6)
+head(comparacion)
+```
+La diferencia pero de la semana con los reales:
+```{r}
+
+# Calcula la diferencia en valor absoluto entre los datos reales y la media de los precios de la semana anterior
+comparacion$Diferencia_absoluta <- abs(comparacion$PRECIO.y - comparacion$PRECIO_semana_anterior)
+
+# Crea un dataframe para el gráfico
+datos_grafico <- data.frame(Fecha = comparacion$Fecha, Diferencia = comparacion$Diferencia_absoluta)
+
+# Crea el gráfico
+g7=ggplot(datos_grafico, aes(x = Fecha, y = Diferencia)) +
+  geom_line(color = "blue") +
+  labs(x = "Fecha", y = "Diferencia Absoluta", title = "Diferencia Absoluta entre los Datos Reales y la Media de los Precios de la Semana Anterior")
+plot(g7)
+
+# Calcula la diferencia al cuadrado entre los datos reales y la media de los precios de la semana anterior
+comparacion$Diferencia_cuadrada <- (comparacion$PRECIO.y - comparacion$PRECIO_semana_anterior)^2
+
+# Calcula el error cuadrático medio (MSE)
+mse <- mean(comparacion$Diferencia_cuadrada)
+
+# Imprime el MSE
+print(mse)
+grid.arrange(g3,g7,ncol=1)
+```
+
+Y este seria el grafico que contiene mas informaicon, compara los datos predichos por nuestor modelo, con los reales, ademas de imprimir en pantalla la diferencia de estos, como podemos observar se ajusta muy muy bien, lo unico que cuando hay subidas impredecibles para cualquier modelo, el nuestro tampoco puede hacerlo:
+
+```{r}
+g4 <- g2 + geom_line(data = datos_grafico, aes(x = Fecha, y = Diferencia), color = "black")
+plot(g4)
+```
+
+Conclusiones Finales del Objetivo de Regresión del Proyecto:
+ Como primera conclusion destacamos el impacto de las energias que resultan realmente relevantes para estimar el modelo, estas son:
+
+    Turbinación/Bombeo Anterior: La turbinación/bombeo tiene un impacto inverso en el precio de la energía. A medida que aumenta la turbinación/bombeo, el precio de la energía disminuye, probablemente debido a la eficiencia en la generación de energía que reduce los costos.
+
+    Carbón Anterior: El uso de carbón, una fuente de energía no renovable con altos costos ambientales y de salud, incrementa el precio de la energía.
+
+    Ciclo Combinado Anterior: Aunque los ciclos combinados son eficientes para generar energía, son costosos de implementar y mantener. Por lo tanto, un aumento en su uso conduce a un aumento en el precio de la energía.
+
+    Eólica Anterior: La energía eólica, una fuente de energía renovable, tiene costos variables debido a la variabilidad del viento. Por lo tanto, un aumento en la generación de energía eólica conduce a un aumento en el precio de la energía.
+
+    Solar Fotovoltaica Anterior: Similar a la energía eólica, la energía solar fotovoltaica es una fuente de energía renovable con costos variables. Un aumento en la generación de energía solar conduce a un aumento en el precio de la energía.
+
+Estas variables son más inestables y varían más que otras, como la nuclear, debido a factores como la variabilidad de las condiciones climáticas (para la energía eólica y solar), los costos de combustible (para el carbón) y los costos de implementación y mantenimiento (para la turbinación/bombeo y los ciclos combinados). Estas variaciones pueden llevar a fluctuaciones en los precios de la energía. Sin embargo, la energía hidroeléctrica, por ejemplo, que depende de una fuente relativamente estable como el agua, tiende a ser más estable en términos de precio.
+
+  Como segunda conclusion tambien es importante destacar que el precio de la energía de un día está fuertemente influenciado por el precio y la demanda de días anteriores. Esto se evidencia al comparar nuestro modelo con modelos triviales, que también pueden predecir los precios de manera razonable. En el modelo regresivo, observamos que tanto el precio como la demanda del día anterior, de la semana y en el caso de la demanda de hace 2 días, tienen un p-valor prácticamente 0, indicando una correlación fuerte y convirtiéndolos en estimadores perfectos. Esto sugiere que la predicción del precio de la energía puede ser mejorada al considerar la información de días anteriores.
+
+

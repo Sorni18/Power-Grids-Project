@@ -1,0 +1,74 @@
+---
+title: "Mapa España"
+author: "Víctor Máñez"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(mapSpain)
+library(shiny)
+library(plotly)
+library(ggplot2)
+library(sf)
+```
+
+```{r Creación del mapa, warning=FALSE}
+#Extreaemos la información necesaria para poder hacer el mapa de España con figuras gracias a la función esp_get_ccaa() de la librería mapSpain. En el dataframe obtenido tenemos la columna geometry que es con la que plotearemos la geografía española
+ccaa <- esp_get_ccaa()
+
+#Como también incluye Canarias, sacamos una cajita que las contenga para que quede mejor el gráfico
+can_box <- esp_get_can_box()
+
+#Leemos los datos después de procesarlos y limpiarlos con los ficheros de Junta_datos_PROY(PIB).Rmd y Limpia_datos.ipynb.
+df <- read.csv("DATOS OBJ 3/datos_mapast.csv")
+#"DATOS OBJ 3/datos_mapast.csv"
+#"C:/Users/victo/OneDrive/Escritorio/Mapa España/datos_mapast.csv"
+nombres_ccaa = comunidades <- c("Andalucía", "Aragón", "Asturias, Principado de", "Balears, Illes", "Canarias", "Cantabria", "Castilla y León", "Castilla - La Mancha", "Cataluña", "Comunitat Valenciana", "Extremadura", "Galicia", "Madrid, Comunidad de", "Murcia, Región de", "Navarra, Comunidad Foral de", "País Vasco", "Rioja, La", "Ceuta", "Melilla")
+
+
+ui <- fluidPage(
+  titlePanel("Mapa de España por Trimestre"),
+  sidebarLayout(
+    sidebarPanel(
+      selectInput("trimestre", "Seleccione el trimestre", choices = colnames(df)[-1],selected = colnames(df)[-1][9], multiple = FALSE),
+      selectInput("tipo", "Seleccione los datos que quiera mostrar", choices = c("Empleo Industrial", "IPI", "PIB per cápita", "Generación", "Demanda", "Generación-Demanda"))
+    ),
+    mainPanel(
+      plotlyOutput("map_plot")
+    )
+  )
+)
+
+server <- function(input, output) {
+  output$map_plot <- renderPlotly({
+    # Lógica para seleccionar el sufijo y límites según el tipo de datos
+    tipo <- switch(input$tipo,
+                   "Generación" = list(sufijo = "_Generación", limite_superior = 4200000.0, limite_inferior = 50000.0),
+                   "IPI" = list(sufijo = "_IPI", limite_superior = 125.0, limite_inferior = 75.0),
+                   "PIB per cápita" = list(sufijo = "_PIB", limite_superior = 40.0, limite_inferior = 0.0),
+                   "Empleo Industrial" = list(sufijo = "_EInd", limite_superior = 40.0, limite_inferior = 0.0),
+                   "Demanda" = list(sufijo = "_Demanda", limite_superior = 4200000.0, limite_inferior = 100000.0),
+                   "Generación-Demanda" = list(sufijo = "_Diferencia", limite_superior = 2400000.0, limite_inferior = -2600000.0))
+    
+    tipo_datos <- paste0(tipo$sufijo, "$")
+    ccaa$X <- paste0(ccaa$ine.ccaa.name, tipo$sufijo)
+    indices_sufijo <- grep(tipo_datos, df$X)
+    ccaa <- merge(ccaa, df[indices_sufijo, c("X", input$trimestre)], by.x = "X", by.y = "X", all.y = TRUE)
+    
+    p <- ggplot(ccaa) +
+      geom_sf(aes(fill = ccaa[[input$trimestre]], text = paste0("Comunidad Autónoma: ", ccaa$ine.ccaa.name, "<br>Valor: ", ccaa[[input$trimestre]]))) +
+      geom_sf_text(aes(label = ine.ccaa.name), size = 2, color = "black") +
+      theme_void() +
+      labs(fill = paste0("Gradiente ", abbreviate(input$tipo, 3, use.classes = TRUE))) +
+      scale_fill_gradient(low = "lightblue", high = "darkblue", limits = c(tipo$limite_inferior, tipo$limite_superior))
+    
+    ggplotly(p, tooltip = "text")
+  })
+}
+
+app <- shinyApp(ui = ui, server = server)
+runApp(app, port=8080)
+```
+

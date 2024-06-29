@@ -1,0 +1,59 @@
+---
+title: "Untitled"
+output: html_document
+date: "2024-05-22"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)
+library(lubridate)
+
+# Cargar los datos
+df_dinamarca <- read.csv('datos_dinamarca.csv')
+
+procesar_dataset <- function(dataset_path) {
+  
+  # Cargar los datos
+  df <- read.csv(dataset_path)
+  
+  # Convertir las columnas de fecha a tipo datetime
+  df$HourUTC <- ymd_hms(df$HourUTC)
+  df$HourDK <- ymd_hms(df$HourDK)
+  
+  # Agrupar por día y calcular media para algunas columnas y suma para otras
+  df_grouped <- df %>%
+    group_by(date = as.Date(HourUTC)) %>%
+    summarise(
+      PriceArea = mean(PriceArea, na.rm = TRUE),
+      TotalLoad = sum(TotalLoad, na.rm = TRUE),
+      Biomass = sum(Biomass, na.rm = TRUE),
+      FossilGas = sum(FossilGas, na.rm = TRUE),
+      FossilHardCoal = sum(FossilHardCoal, na.rm = TRUE),
+      FossilOil = sum(FossilOil, na.rm = TRUE),
+      HydroPower = sum(HydroPower, na.rm = TRUE),
+      OtherRenewable = sum(OtherRenewable, na.rm = TRUE),
+      SolarPower = sum(SolarPower, na.rm = TRUE),
+      Waste = sum(Waste, na.rm = TRUE),
+      OnshoreWindPower = sum(OnshoreWindPower, na.rm = TRUE),
+      OffshoreWindPower = sum(OffshoreWindPower, na.rm = TRUE),
+      ExchangeContinent = sum(ExchangeContinent, na.rm = TRUE),
+      ExchangeGreatBelt = sum(ExchangeGreatBelt, na.rm = TRUE),
+      ExchangeNordicCountries = sum(ExchangeNordicCountries, na.rm = TRUE),
+      ExchangeGreatBritain = sum(ExchangeGreatBritain, na.rm = TRUE)
+    ) %>%
+    ungroup()
+  
+  return(df_grouped)
+}
+
+# Ejemplo de uso
+
+df_procesado <- procesar_dataset('datos_dinamarca.csv')
+print(df_procesado)
+
+```
+

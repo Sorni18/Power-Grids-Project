@@ -1,0 +1,503 @@
+---
+title: "OBJETIVO 5 ANALISIS DESCRIPTIVO Y ESTADISTICO + REGRESION"
+output: html_document
+date: "2024-03-13"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+CARGAMOS LOS DATOS
+```{r}
+portugal="DATOS OBJ 4/datosportugaldefinitivos2.csv"
+datosportugal=read.csv(portugal)
+origpt=datosportugal
+head(datosportugal)
+
+francia="DATOS OBJ 4/datosfranciaarrgeglados.csv"
+datosfrancia=read.csv(francia)
+origfr=datosfrancia
+head(datosfrancia)
+
+españa="DATOS OBJ 4/datos_proy.csv"
+datosespaña=read.csv(españa)
+origesp=datosespaña
+head(datosespaña)
+
+estonia="DATOS OBJ 4/definitivo_total_estonia.csv"
+datosestonia=read.csv(estonia)
+origest=datosestonia
+head(datosestonia)
+
+dinamarca="DATOS OBJ 4/datos_dinamarca_def.csv"
+datosdinamarca=read.csv(dinamarca)
+origdnk=datosdinamarca
+head(datosdinamarca)
+```
+CARGAMOS LAS LIBRERIAS, PONEMOS LAS FECHAS EN FORMATO FECHA, Y HACEMOS UN GRAFICO DE LA VARIACION DE LA DEMANDA A LO LARGO DEL TIEMPO EN DSTINTOS PAISES
+```{r}
+# Carga la biblioteca ggplot2
+# Carga la biblioteca ggplot2
+library(ggplot2)
+library(dplyr)
+library(lubridate)
+library(rlang)
+library(lmtest)
+# Asegúrate de que la columna de fecha es de tipo Date
+datosespaña$FECHA <- as.Date(datosespaña$Fecha, format="%d/%m/%Y")  
+datosportugal$Fecha <- as.Date(datosportugal$Fecha, format="%d/%m/%Y")  
+datosfrancia$Fecha <- as.Date(datosfrancia$Fecha, format="%d/%m/%Y")
+datosfrancia$FechaM <- as.Date(datosfrancia$FechaM, format="%d/%m/%Y")
+datosestonia$date <- as.Date(datosestonia$date, format="%d/%m/%Y")
+datosdinamarca$HourUTC <- as.Date(datosdinamarca$HourUTC,format="%m/%d/%Y")
+
+
+# Ahora 
+ggplot() +
+  geom_line(data = datosespaña, aes(x = FECHA, y = DEMANDA, color = "España")) +
+  geom_line(data = datosportugal, aes(x = Fecha, y = demanda, color = "Portugal")) + 
+  geom_line(data = datosfrancia, aes(x = Fecha, y = Demanda , color="Francia")) +
+  geom_line(data = datosestonia, aes(x = date, y = consumption_local_total * 1000, color = "Estonia")) +
+  geom_line(data = datosdinamarca, aes(x = HourUTC, y = TotalLoad, color = "Dinamarca")) # Cambiado HourUTC a Fecha
+
+
+```
+
+CREAMOS UN GRAFICO DE LA VARIACION DE PRECIOS A LO LARGO DEL TIEMPO (ESPAÑA Y PORTUGAL COMPARTEN PRECIO; YA QUE LA DIFERENCIA NO ES NOTORIA Y NO SE ENCONTRABAN DATOS DE PORTUGAL)
+```{r}
+# Crea el gráfico para el precio
+ggplot() +
+  geom_line(data = datosespaña, aes(x = FECHA, y = PRECIO, color = "España y Portugal"))  + 
+  geom_line(data = datosfrancia, aes(x = FechaM, y = precio *10 , color="Francia")) +
+  geom_line(data=datosestonia,aes(x= date,y=prices2,color="Estonia")) +
+  geom_line(data = datosdinamarca, aes(x = HourUTC, y =price, color = "Dinamarca"))
+
+```
+A PARTIR DE AQUI SON GRAFICOS DE COMO VARIAN A LO LARGO DEL TIEMPO EL APORTE A LA GENERACION TOTAL DEL PAIS LAS DISTINTAS FUENTES, POR CADA PAIS
+
+PORTUGAL:
+```{r}
+colnames(datosportugal)
+columnas_energia <- c("Fecha", "hidraulica", "eolica", "Solar", "Biomasa", "Ondas", "gas.natural.ciclo.combinado","gas.natural","carbon","otra.termica","importacion","exportacion","turbinacion.bombeo")
+datosportugal <- datosportugal[, columnas_energia]
+datosportugal$AñoMes <- format(datosportugal$Fecha, "%Y-%m")
+
+# Agrupar y sumar los datos por "AñoMes"
+datos_agrupados <- datosportugal %>%
+  group_by(AñoMes) %>%
+  summarise(hidraulica = sum(hidraulica, na.rm = TRUE),
+            eolica = sum(eolica, na.rm = TRUE),
+            Solar = sum(Solar, na.rm = TRUE),
+            Biomasa = sum(Biomasa, na.rm = TRUE),
+            Ondas = sum(Ondas, na.rm = TRUE),
+            `gas.natural.ciclo.combinado` = sum(`gas.natural.ciclo.combinado`, na.rm = TRUE), 
+            `gas.natural`= sum(`gas.natural`, na.rm = TRUE),
+            `carbon` = sum(carbon, na.rm = TRUE),
+            `otra.termica` = sum(`otra.termica`, na.rm = TRUE),
+            importacion = sum(importacion, na.rm = TRUE),
+            exportacion = sum(exportacion, na.rm = TRUE),
+            `turbinacion.bombeo` = sum(`turbinacion.bombeo`, na.rm = TRUE))
+
+# Derretir los datos para el gráfico
+datos_melt <- reshape2::melt(datos_agrupados, id.vars = "AñoMes")
+
+# Convertir "AñoMes" a un objeto de fecha
+datos_melt$AñoMes <- as.Date(paste(datos_melt$AñoMes, "-01", sep=""), "%Y-%m-%d")
+
+# Crear el gráfico de líneas de tendencia
+ggplot(datos_melt, aes(x = AñoMes, y = value, color = variable)) +
+  geom_smooth(method = "loess") +
+  theme_minimal() +
+  labs(x = "Fecha", y = "Producción de energía", color = "Tipo de energía") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+ESPAÑA:
+```{r}
+# Seleccionando las columnas relevantes
+columnas_espana <- c("Fecha", "hidraulica", "turbinacion.bombeo", "NUCLEAR", "carbon", 
+                     "diesel", "turbina.de.gas", "turbina.de.vapor",
+                     "ciclo.combinado","eolica","solar.fotovoltaica",
+                     "solar.termica","otras.renovables","cogeneracion")
+
+datosespaña <- datosespaña[, columnas_espana]
+datosespaña$Fecha <- as.Date(datosespaña$Fecha, format = "%m/%d/%Y")
+datosespaña$AñoMes <- format(datosespaña$Fecha, "%Y-%m")
+
+# Agrupando y sumando los datos por 'AñoMes'
+datos_agrupados_02 <- datosespaña %>%
+  group_by(AñoMes) %>%
+  summarise(across(-Fecha, sum, na.rm = TRUE))
+
+# Derretir los datos para el gráfico
+datos_melt_02 <- reshape2::melt(datos_agrupados_02, id.vars = "AñoMes")
+
+# Convertir 'AñoMes' a un objeto de fecha
+datos_melt_02$AñoMes <- as.Date(paste(datos_melt_02$AñoMes, "-01", sep=""), "%Y-%m-%d")
+
+# Crear el gráfico de líneas de tendencia
+ggplot(datos_melt_02, aes(x = AñoMes, y = value, color = variable)) +
+  geom_smooth(method = 'loess') +
+  theme_minimal() +
+  labs(x = 'Fecha', y = 'Producción de energía', color = 'Tipo de energía') +
+  theme(axis.text.x=element_text(angle=90,hjust=1))
+
+```
+FRANCIA:
+```{r}
+# Seleccionando las columnas relevantes para Francia
+columnas_francia <- c("FechaM", "Produccion.Neta.Nuclear.GWH", "Produccion.Neta.Hidraulica.GWH", 
+                      "Produccion.Neta.Eolica.GWH", "Produccion.Neta.Solar.GWH", 
+                      "Produccion.Neta.Termica.GWH","Importaciones.Fisicas.Electricidad.GWH")
+
+datosfrancia <- datosfrancia[, columnas_francia]
+datosfrancia$FechaM <- as.Date(datosfrancia$FechaM, format = "%m/%d/%Y")
+
+# Derretir los datos para el gráfico
+datos_melt_francia <- reshape2::melt(datosfrancia, id.vars = "FechaM")
+
+# Crear el gráfico de líneas de tendencia para Francia
+ggplot(datos_melt_francia, aes(x = FechaM, y = value, color = variable)) +
+  geom_smooth(method = 'loess') +
+  theme_minimal() +
+  labs(x = 'FechaM', y = 'Producción de energía', color = 'Tipo de energía') +
+  theme(axis.text.x=element_text(angle=90,hjust=1))
+
+
+```
+ESTONIA:
+```{r}
+# Seleccionando las columnas relevantes para Estonia
+columnas_estonia <- c("date", "import_total_x", "import_latvia", "import_finland","renewable_total","renewable_wind",	"renewable_hydro","renewable_bio","nonrenewable_total","renewable_solar")
+
+datosestonia <- datosestonia[, columnas_estonia]
+datosestonia$date <- as.Date(datosestonia$date, format = "%m/%d/%Y")
+
+# Derretir los datos para el gráfico
+datos_melt_estonia <- reshape2::melt(datosestonia, id.vars = "date")
+
+# Crear el gráfico de líneas de tendencia para Estonia
+ggplot(datos_melt_estonia, aes(x = date, y = value, color = variable)) +
+  geom_smooth(method = 'loess') +
+  theme_minimal() +
+  labs(x = 'Fecha', y = 'Producción de energía', color = 'Tipo de energía') +
+  theme(axis.text.x=element_text(angle=90,hjust=1))
+
+```
+DINAMARCA:
+
+```{r}
+# Seleccionando las columnas relevantes
+columnas_dinamarca <- c("HourUTC", "Biomass", "FossilGas", "FossilHardCoal", "FossilOil", 
+                     "HydroPower", "OtherRenewable", "SolarPower", "Waste",
+                     "OnshoreWindPower","OffshoreWindPower","ExchangeContinent",
+                     "ExchangeGreatBelt","ExchangeNordicCountries","ExchangeGreatBritain")
+
+datosdinamarca <- datosdinamarca[, columnas_dinamarca]
+datosdinamarca$HourUTC <- as.Date(datosdinamarca$HourUTC, format = "%m/%d/%Y")
+datosdinamarca$AñoMes <- format(datosdinamarca$HourUTC, "%Y-%m")
+
+# Agrupando y sumando los datos por 'AñoMes'
+datos_agrupados_dk <- datosdinamarca %>%
+  group_by(AñoMes) %>%
+  summarise(across(-HourUTC, sum, na.rm = TRUE))
+
+# Derretir los datos para el gráfico
+datos_melt_dk <- reshape2::melt(datos_agrupados_dk, id.vars = "AñoMes")
+
+# Convertir 'AñoMes' a un objeto de fecha
+datos_melt_dk$AñoMes <- as.Date(paste(datos_melt_dk$AñoMes, "-01", sep=""), "%Y-%m-%d")
+
+# Crear el gráfico de líneas de tendencia
+ggplot(datos_melt_dk, aes(x = AñoMes, y = value, color = variable)) +
+  geom_smooth(method = 'loess') +
+  theme_minimal() +
+  labs(x = 'Fecha', y = 'Producción de energía', color = 'Tipo de energía') +
+  theme(axis.text.x=element_text(angle=90,hjust=1))
+
+```
+AQUI CALCULAMOS EL PORCENTAJE MEDIO DEL APORTE A LA GENERACION TOTAL DE CADA PAIS, POR FUENTE DE ENERGIA
+
+
+PORTUGAL:
+```{r}
+# Convertir las columnas de datos a numérico (si es necesario)
+datosportugal[, -1] <- lapply(datosportugal[, -1], as.numeric)
+
+# Calcular la suma total de todas las fuentes de energía para cada mes
+datosportugal$total <- rowSums(datosportugal[, -1], na.rm = TRUE)
+
+# Calcular el porcentaje de cada fuente de energía
+for (columna in names(datosportugal)[-c(1, length(datosportugal))]) {
+  datosportugal[[paste0(columna, "_porcentaje")]] <- datosportugal[[columna]] / datosportugal$total * 100
+}
+
+# Seleccionar solo las columnas de porcentaje
+columnas_porcentaje <- grep("_porcentaje$", names(datosportugal), value = TRUE)
+datos_porcentaje_pt <- datosportugal[, c("Fecha", columnas_porcentaje)]
+
+# Calcular la media de los porcentajes para cada fuente de energía
+media_porcentajes_pt <- colMeans(datos_porcentaje_pt[, -1], na.rm = TRUE)
+
+# Crear una tabla con las medias de los porcentajes
+tabla_media_porcentajes_pt <- data.frame(Fuente = names(media_porcentajes_pt), MediaPorcentaje = round(media_porcentajes_pt, 2))
+
+tabla_media_porcentajes_pt
+
+```
+
+
+ESPAÑA
+```{r}
+# Asegúrate de que los nombres de las columnas coinciden con los de tu dataframe
+columnas_energia <- c("hidraulica", "turbinacion.bombeo", "NUCLEAR", "carbon", 
+                      "diesel", "turbina.de.gas", "turbina.de.vapor", "ciclo.combinado", 
+                      "eolica", "solar.fotovoltaica", "solar.termica", "otras.renovables", 
+                      "cogeneracion")
+
+# Calcular la suma total de todas las fuentes de energía para cada mes
+datosespaña$total = rowSums(datosespaña[, columnas_energia], na.rm = TRUE)
+
+# Calcular el porcentaje de cada fuente de energía
+for (columna in columnas_energia) {
+  datosespaña[[paste0(columna, "_porcentaje")]] = datosespaña[[columna]] / datosespaña$total * 100
+}
+
+# Seleccionar solo las columnas de porcentaje
+columnas_porcentaje = grep("_porcentaje$", names(datosespaña), value = TRUE)
+datos_porcentaje_es = datosespaña[, c("Fecha", columnas_porcentaje)]
+
+# Calcular la media de los porcentajes para cada fuente de energía
+media_porcentajes_es = colMeans(datos_porcentaje_es[,-1], na.rm = TRUE)
+
+# Crear una tabla con las medias de los porcentajes
+tabla_media_porcentajes_es = data.frame(Fuente = names(media_porcentajes_es), MediaPorcentaje = media_porcentajes_es)
+tabla_media_porcentajes_es
+
+
+
+```
+
+FRANCIA:
+```{r}
+# Calcular la suma total de todas las fuentes de energía para cada mes
+datosfrancia$total = rowSums(datosfrancia[,-1])
+
+# Calcular el porcentaje de cada fuente de energía
+for (columna in names(datosfrancia)[-c(1, length(datosfrancia))]) {
+  datosfrancia[[paste0(columna, "_porcentaje")]] = datosfrancia[[columna]] / datosfrancia$total * 100
+}
+
+# Seleccionar solo las columnas de porcentaje
+columnas_porcentaje = grep("_porcentaje$", names(datosfrancia), value = TRUE)
+datos_porcentaje_fr = datosfrancia[, c("FechaM", columnas_porcentaje)]
+
+# Calcular la media de los porcentajes para cada fuente de energía
+media_porcentajes_fr = colMeans(datos_porcentaje_fr[,-1], na.rm = TRUE)
+
+# Crear una tabla con las medias de los porcentajes
+tabla_media_porcentajes_fr = data.frame(Fuente = names(media_porcentajes_fr), MediaPorcentaje = round(media_porcentajes_fr,2))
+tabla_media_porcentajes_fr
+rownames(tabla_media_porcentajes_fr)
+
+```
+ESTONIA:
+
+```{r}
+# Calcular la suma total de todas las fuentes de energía para cada mes
+datosestonia$total = rowSums(datosestonia[,-1])
+
+# Calcular el porcentaje de cada fuente de energía
+for (columna in names(datosestonia)[-c(1, length(datosestonia))]) {
+  datosestonia[[paste0(columna, "_porcentaje")]] = datosestonia[[columna]] / datosestonia$total * 100
+}
+
+# Seleccionar solo las columnas de porcentaje
+columnas_porcentaje = grep("_porcentaje$", names(datosestonia), value = TRUE)
+datos_porcentaje_ee = datosestonia[, c("date", columnas_porcentaje)]
+
+# Calcular la media de los porcentajes para cada fuente de energía
+media_porcentajes_ee = colMeans(datos_porcentaje_ee[,-1], na.rm = TRUE)
+
+# Crear una tabla con las medias de los porcentajes
+tabla_media_porcentajes_ee = data.frame(Fuente = names(media_porcentajes_ee), MediaPorcentaje = round(media_porcentajes_ee,2))
+tabla_media_porcentajes_ee
+
+```
+DINAMARCA:
+```{r}
+##EXCLUIR DINAMARCA PRECIOS PORCENTAJE
+
+# Calcular la suma total de todas las fuentes de energía para cada mes
+datos_agrupados_dk$total = rowSums(datos_agrupados_dk[,-1])
+
+# Calcular el porcentaje de cada fuente de energía
+for (columna in names(datos_agrupados_dk)[-c(1, length(datos_agrupados_dk))]) {
+  datos_agrupados_dk[[paste0(columna, "_porcentaje")]] = datos_agrupados_dk[[columna]] / datos_agrupados_dk$total * 100
+}
+
+# Seleccionar solo las columnas de porcentaje
+columnas_porcentaje = grep("_porcentaje$", names(datos_agrupados_dk), value = TRUE)
+datos_porcentaje_dk = datos_agrupados_dk[, c("AñoMes", columnas_porcentaje)]
+
+# Calcular la media de los porcentajes para cada fuente de energía
+media_porcentajes_dk = colMeans(datos_porcentaje_dk[,-1], na.rm = TRUE)
+
+# Crear una tabla con las medias de los porcentajes
+tabla_media_porcentajes_dk = data.frame(Fuente = names(media_porcentajes_dk), MediaPorcentaje = round(media_porcentajes_dk,2))
+tabla_media_porcentajes_dk
+```
+COMO PODEMOS VER, COMO DINAMARCA TIENE EL SALDO Y ES NEGATIVO, NO SE PUEDE COMPARAR CON EL RESTO DE PAISES YA QUE LA MAGNITUD EN ESTOS CAMPOS ES DISTINTA, POR LO QUE PARA ESTE ANALISIS NO LO USAREMOS
+
+AQUI EMPEZAMOS A ESTUDIAR LA REGRESION PARA ESPAÑA, PARA LA VARIABLE DE PRECIO, OBTENEMOS UN PRIMER MODELO ESENCIAL PARA EL ENTENDIMIENTO DE NUESTRAS PREDICCIONES Y DATOS
+
+```{r}
+# Crear un nuevo data.frame con el mismo número de filas que 'datosespaña'
+columnas_energia <- c("hidraulica", "turbinacion.bombeo", "NUCLEAR", "carbon", 
+                      "diesel", "turbina.de.gas", "turbina.de.vapor", "ciclo.combinado", 
+                      "eolica", "solar.fotovoltaica", "solar.termica", "otras.renovables", 
+                      "cogeneracion")
+# Crear un nuevo data.frame con el mismo número de filas que 'datosespaña'
+nuevo_data <- data.frame(matrix(ncol = length(columnas_energia), nrow = nrow(origesp)))
+
+# Asignar nombres a las columnas
+names(nuevo_data) <- c( columnas_energia)
+
+
+# Calcular el tanto por uno de cada estructura de generación y multiplicarlo por la demanda
+for (col in columnas_energia) {
+  nuevo_data[[col]] <- origesp[[col]] / sum(origesp[[col]])
+}
+nuevo_data=cbind(nuevo_data,origesp$DEMANDA)
+nuevo_data=cbind(nuevo_data,origesp$PRECIO)
+nuevo_data<-cbind(nuevo_data,origesp$Fecha)
+
+
+precio_ant <- c(0, head(origesp$PRECIO, -1))
+nuevo_data=nuevo_data<-cbind(nuevo_data,precio_ant)
+demanda_ant = c(0,head(origesp$DEMANDA,-1))
+nuevo_data=nuevo_data=cbind(nuevo_data,demanda_ant)
+precio_antS <- c(0,0,0,0,0,0,0,head(origesp$PRECIO, -7))
+nuevo_data=nuevo_data<-cbind(nuevo_data,precio_antS)
+demanda_antS = c(0,0,0,0,0,0,0,head(origesp$DEMANDA,-7))
+nuevo_data=nuevo_data=cbind(nuevo_data,demanda_antS)
+precio_ant2 <- c(0,0,head(origesp$PRECIO, -2))
+nuevo_data=nuevo_data<-cbind(nuevo_data,precio_ant2)
+demanda_ant2 = c(0,0,head(origesp$DEMANDA,-2))
+nuevo_data=nuevo_data=cbind(nuevo_data,demanda_ant2)
+head(nuevo_data)
+tablas_analiz=c("hidraulica_ant", "turbinacion.bombeo_ant", "NUCLEAR_ant", "carbon_ant", 
+                      "diesel_ant", "turbina.de.gas_ant", "turbina.de.vapor_ant", "ciclo.combinado_ant", 
+                      "eolica_ant", "solar.fotovoltaica_ant", "solar.termica_ant", "otras.renovables_ant", 
+                      "cogeneracion_ant", "precio_ant","demanda_ant","precio_antS","demanda_antS","precio_ant2","demanda_ant2")
+# Inicializar las columnas de tablas_analiz con 0 y los valores del día anterior
+for (col in columnas_energia) {
+  nuevo_data[[paste0(col, "_ant")]] <- c(0, head(nuevo_data[[col]], -1))
+}
+
+# Verificar los cambios
+head(nuevo_data)
+nuevo_data_subset <- nuevo_data[, tablas_analiz]
+
+# Ajustar el modelo de regresión lineal
+modelo <- lm(origesp$PRECIO ~ ., data = nuevo_data_subset)
+
+# Mostrar el resumen del modelo
+summary(modelo)
+
+```
+Como podemos observar ni diesel, ni turbina.vapor ni solar.termica son representativas, por lo que las eliminaremos del modelo.
+
+```{r}
+# Crear una lista de columnas sin 'NUCLEAR_ant'
+columnas_sin_diesel <- setdiff(tablas_analiz, "diesel_ant")
+
+# Seleccionar todas las columnas excepto 'NUCLEAR_ant'
+nuevo_data_subset <- nuevo_data[, columnas_sin_diesel]
+modelo <- lm(origesp$PRECIO ~ ., data = nuevo_data_subset)
+
+# Mostrar el resumen del modelo
+summary(modelo)
+
+```
+```{r}
+columnas_sin_diesel_y_tbv <- setdiff(columnas_sin_diesel, "turbina.de.vapor_ant")
+nuevo_data_subset <- nuevo_data[, columnas_sin_diesel_y_tbv]
+modelo <- lm(origesp$PRECIO ~ ., data = nuevo_data_subset)
+
+# Mostrar el resumen del modelo
+summary(modelo)
+```
+
+```{r}
+columnas_sin_diesel_y_tbv_y_cog <- setdiff(columnas_sin_diesel_y_tbv, "cogeneracion_ant")
+nuevo_data_subset <- nuevo_data[, columnas_sin_diesel_y_tbv_y_cog]
+modelo <- lm(origesp$PRECIO ~ ., data = nuevo_data_subset)
+
+# Mostrar el resumen del modelo
+summary(modelo)
+```
+```{r}
+columnas_sin_diesel_y_tbv_y_cog_y_nuc <- setdiff(columnas_sin_diesel_y_tbv_y_cog, "NUCLEAR_ant")
+nuevo_data_subset <- nuevo_data[, columnas_sin_diesel_y_tbv_y_cog_y_nuc]
+modelo <- lm(origesp$PRECIO ~ ., data = nuevo_data_subset)
+
+# Mostrar el resumen del modelo
+summary(modelo)
+```
+```{r}
+columnas_sin_diesel_y_tbv_y_cog_y_nuc_y_solt <- setdiff(columnas_sin_diesel_y_tbv_y_cog_y_nuc, "solar.termica_ant")
+nuevo_data_subset <- nuevo_data[, columnas_sin_diesel_y_tbv_y_cog_y_nuc_y_solt]
+modelo <- lm(origesp$PRECIO ~ ., data = nuevo_data_subset)
+
+# Mostrar el resumen del modelo
+summary(modelo)
+```
+```{r}
+columnas_sin_diesel_y_tbv_y_cog_y_nuc_y_solt_y_tbg <- setdiff(columnas_sin_diesel_y_tbv_y_cog_y_nuc_y_solt, "turbina.de.gas_ant")
+nuevo_data_subset <- nuevo_data[, columnas_sin_diesel_y_tbv_y_cog_y_nuc_y_solt_y_tbg]
+modelo <- lm(origesp$PRECIO ~ ., data = nuevo_data_subset)
+
+# Mostrar el resumen del modelo
+summary(modelo)
+```
+```{r}
+columnas_sin_diesel_y_tbv_y_cog_y_nuc_y_solt_y_tbg_y_otr <- setdiff(columnas_sin_diesel_y_tbv_y_cog_y_nuc_y_solt_y_tbg, "otras.renovables_ant")
+nuevo_data_subset <- nuevo_data[, columnas_sin_diesel_y_tbv_y_cog_y_nuc_y_solt_y_tbg_y_otr]
+modelo <- lm(origesp$PRECIO ~ ., data = nuevo_data_subset)
+
+# Mostrar el resumen del modelo
+summary(modelo)
+```
+```{r}
+columnas_sin_diesel_y_tbv_y_cog_y_nuc_y_solt_y_tbg_y_otr_y_pa2 <- setdiff(columnas_sin_diesel_y_tbv_y_cog_y_nuc_y_solt_y_tbg_y_otr, "precio_ant2")
+nuevo_data_subset <- nuevo_data[, columnas_sin_diesel_y_tbv_y_cog_y_nuc_y_solt_y_tbg_y_otr_y_pa2]
+modelo <- lm(origesp$PRECIO ~ ., data = nuevo_data_subset)
+
+# Mostrar el resumen del modelo
+summary(modelo)
+predicciones <- predict(modelo, nuevo_data)
+print(predicciones)
+```
+```{r}
+reales <- nuevo_data$'origesp$PRECIO'
+
+
+# Crea un dataframe con tus datos
+df <- data.frame(Dia = 1:length(predicciones), Predicciones = predicciones, Reales = reales)
+
+# Carga la librería ggplot2
+library(ggplot2)
+
+# Crea el gráfico
+ggplot(df, aes(Dia)) +
+  geom_line(aes(y = Predicciones), color = "blue") +
+  geom_line(aes(y = Reales), color = "red") +
+  labs(x = "Día", y = "Valor", title = "Comparación de las predicciones del modelo con los datos reales") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "red"), labels = c("Predicciones", "Reales")) +
+  theme(legend.position = "bottom")
+```
+
+
+
+
