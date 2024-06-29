@@ -1,0 +1,221 @@
+---
+title: "proyecto"
+author: "Aleixandre"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+En primer lugar, voy a cargar las librerías que voy a usar a lo largo de este documento:
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(readxl)
+library(shiny)
+library(leaflet)
+library(plotly)
+library(sf)
+library(data.table)
+library(tibble)
+library(tidyr)
+library(reshape2)
+
+```
+
+A continuación, cargaré los diversos archivos necesarios para este documento:
+
+1.  **Desempleo:** Este archivo, en formato Excel, contiene datos sobre el porcentaje de desempleo en el sector industrial para las diferentes comunidades autónomas desde 2011 hasta 2023, desglosados por trimestre.
+
+2.  **IPI:** Se trata de un archivo CSV que incluye datos del Índice de Producción Industrial (IPI) para cada comunidad autónoma desde 2011 hasta 2023, en este caso a nivel mensual.
+
+```{r}
+
+ipi <- read.csv("DATOS HITO 2/ipi_ccaa.csv")
+```
+
+Ahora vamos a crear otros dataframes donde pondremos las ccaa en las columnas para poder facilitarnos el análisis.
+
+```{r}
+ipit <- ipi
+ccaa <- ipit$X
+rownames(ipit) <- ccaa
+ipit$X <- NULL
+ipit <- t(ipit)
+```
+
+Tras realizar la transformación anterior pasaremos a ver qué aspecto tienen, es decir, exploraremos los datos.
+
+```{r}
+summary(ipit)
+```
+
+Tras analizar el summary para las comunidades autónomas, observamos que todas tienen un valor entre 90-100, sin embargo hay algunas como La Rioja(108.35) que superan estos datos, no extraeremos conclusiones definitivas todavía pero es una cosa a tener en cuenta.
+
+Por otra parte, también sería interesante realizar un summary para el dataframe IPI, donde podremos observar la evolución de este a lo largo de los años.
+
+```{r}
+summary(ipi)
+```
+
+Tras observar este, podemos observar ligeras diferencias entre meses correlativos, es decir, entre meses que se encuentran cercanos, sin embargo entre algunos meses durante varios años podemos ver ligeras caídas, como es el caso del mes 7 y 8 de cada año, esto puede deberse principalmente a que en los meses de agosto se dan vacaciones y la producción baja, esto es simplemente una hipótesis de momento, pero será una cosa a tener en cuenta.
+
+Ahora pasaremos al análisis exploratorio en el que realizaremos una serie de gráficos para extraer información:
+
+```{r}
+filas_invertidas <- rev(rownames(ipit))
+# Reorganizar las filas del DataFrame
+ipitb <- ipit[filas_invertidas, ]
+# Vector con los números de referencia
+fechas <-row.names(ipitb)
+# Iterar sobre cada número en 'quiero' y crear un gráfico individual
+for (i in colnames(ipitb)) {
+  par(mar = c(5, 4, 4, 6))
+  # Crear un nuevo gráfico de líneas
+  plot(ipitb[, i], type = "l", xaxt = "n", ylab = "Valores", main = paste("Gráfico de Líneas IPI para el número", i))
+  # Etiquetas en el eje x
+  axis(1, at = 1:length(fechas), labels = fechas, las = 2)
+  
+  #valores_y <- ipitb["X2020M03":"X2021M01", i]
+
+# Obtener las fechas para el período
+  #fechas_periodo <- fechas["X2020M03":"X2021M01"]
+
+# Dibujar un círculo en cada punto del período
+  #points(1:length(valores_y), valores_y, col = "red", pch = 19)
+}
+```
+
+Tras analizar en una primera vista los gráficos de líneas para las diferentes CCAA, lo que primero hemos observado como patrón principal en todas ellas es la caída que se produce en la producción en el año 2020, hecho que asociamos a la pandemia del "Coronavirus", este hecho supondrá que en algunas ocasiones sean valores anómalos las observaciones asociadas a esos valores, por lo que supondrá una cosa a tener en cuenta de cara a la preparación de modelo, más adelante extraeremos estos anómalos.
+
+A continuación, vamos a crear una matriz correlaciones para poder observar que CCAA tienen más relación entre ellas y así también podremos describir gráficos en los que se combinen esos.
+
+```{r}
+matriz_cor <- cor(ipitb)
+summary(matriz_cor)
+
+correlation_matrix = cor(ipitb)
+# Crear un gráfico de mapa de calor
+options(repr.plot.width = 100, repr.plot.height = 8)
+ggplot(data = reshape2::melt(correlation_matrix), aes(Var1, Var2, fill = value)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0, limit = c(-1,1),
+                       breaks = c(seq(-1, 1, by =0.1 ))) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size=6),
+        axis.text.y = element_text(size = 6)) +
+  labs(title = "Matriz de Correlaciones",
+       x = "", y = "") +
+  coord_fixed()
+```
+
+Tras observar la matriz de correlaciones y observar el summary que nos resume la información y nos hace más fácil acceder a los que tienen correlacciones más altas a partir de las medias y del tercer cuartil, vamos a escribir las más interesantess:
+
+**-País Vasco - Catalunya : 0.931**
+
+**-Aragón - Catalunya : 0.9**
+
+**-Aragón - Comunitat Valenciana : 0.87**
+
+**-Catalunya - Comunitat Valenciana : 0.89**
+
+**-La Rioja - Extremadura : -0.174**
+
+A continuación, describiremos gráficos en los que combinemos las diferentes CCAA que hemos destacado con las correlaciones
+
+```{r}
+#País Vasco - Catalunya
+# Trazar la primera línea
+plot(ipitb[, 16], type = "l", xaxt = "n", xlab = "Fechas", ylab = "Valores", main = "Gráfico de Líneas IPI")
+
+# Trazar la segunda línea y configurar el color
+lines(ipitb[, 9], col = "blue")
+
+# Agregar etiquetas al eje x
+axis(1, at = 1:length(fechas), labels = fechas, las = 2)
+
+# Crear la leyenda fuera del gráfico
+legend("topright", legend = c(colnames(ipitb)[16], colnames(ipitb)[9]), col = c("black", "blue"), lty = 1, bty = "n", cex = 0.8, inset = c(0.05, 0.05))
+
+
+
+
+#Aragón-Catalunya-C.Valenciana
+plot(ipitb[, 9], type = "l", xaxt = "n", xlab = "Fechas", ylab = "Valores", main = "Gráfico de Líneas IPI")
+
+# Trazar la segunda línea y configurar el color
+lines(ipitb[, 10], col = "blue")
+lines(ipitb[, 2], col = "red")
+# Crear la leyenda
+legend("topright", legend = c(colnames(ipitb)[1], colnames(ipitb)[3], colnames(ipitb)[2]), col = c("black", "blue", "red"), lty = 1, bty = "n", cex = 0.8, inset = c(0.05, 0.05))
+
+
+# Agregar etiquetas al eje x
+axis(1, at = 1:length(fechas), labels = fechas, las = 2)
+
+
+
+#Extremadura-La Rioja
+plot(ipitb[, 17], type = "l", xaxt = "n", xlab = "Fechas", ylab = "Valores", main = "Gráfico de Líneas IPI")
+
+# Trazar la segunda línea y configurar el color
+lines(ipitb[, 11], col = "blue")
+
+# Crear la leyenda
+legend("topright", legend = c(colnames(ipitb)[17], colnames(ipitb)[11]), col = c("black", "blue"), lty = 1, bty = "n", cex = 0.8, inset = c(0.05, 0.05))
+
+# Agregar etiquetas al eje x
+axis(1, at = 1:length(fechas), labels = fechas, las = 2)
+```
+Tras observar los gráficos que hemos creado, vemos que claramente hay un patrón muy similar entre Catalunya y el Pais Vasco, esto lo podemos asociar a que son dos de los puntos de mayor producción industrial de España, y por tanto están influenciados, pero sin corrobarlo no podemos afirmarlo como tal.
+Por otra parte también podemos ver un patroón claro entre Valencia - Catalunya - Aragón, hecho que podemos asociar a la proximidad entre las zonas y que por tanto pueden influenciarse.
+Por último destacamos el de Extremadura - La Rioja que no tienn ninguna relación y los gráficos de líneas son muy diferentes.
+
+
+Ahora realizaremos un análisis de parámetros como la media y otros parámetros, además de observar si hay datos anómalos, esto lo haremos a través del gráfico de caja y bigotes:
+```{r}
+
+# Crear un gráfico de boxplot para el IPI de las comunidades autónomas
+boxplot(ipitb[, -1], col = rainbow(length(colnames(ipitb)[-1])), ylab = "IPI", main = "Boxplot del IPI por Comunidad Autónoma", las=2)
+media_total <- mean(as.matrix(ipitb[, -1]))
+abline(h = media_total, col = "red", lwd = 2)
+
+outliers <- boxplot(ipitb[,-1])$out
+for (i in outliers){
+  posiciones <- which(ipitb == i, arr.ind = TRUE)
+  
+# Obtener los nombres de filas y columnas
+  nombres_filas <- rownames(ipitb)[posiciones[, 1]]
+  nombres_columnas <- colnames(ipitb)[posiciones[, 2]]
+  print(paste("El valor", i, "se encuentra en las siguientes posiciones:"))
+  for (i in 1:nrow(posiciones)) {
+  print(paste("Fila:", nombres_filas[i], ", Columna:", nombres_columnas[i]))
+}
+}
+```
+
+Tras observar el gráfico de caja y bigotes podemos observar como hay ciertas comunidades que tienen un valor medio por encima de la media de todo el dataframe, estas son: Illes Balears, Canarias, Castilla y León, Comunitat Valenciana, Catalunya, La Rioja, País Vasco, cosa que nos podría dar información sobre qué comunidades podrían tener una producción superio.
+Por otra parte, un hecho a tener en cuenta es que los valores anómalos no son superiores a las medias de las respectivas CCAA, sino inferiores esto podría siginificar que se han producido problemas económicos o similares, cosa que podremos confirmar más adelante cuando cruccemos esta con el dataframe del desempleo.
+
+Además de ello hemos extraído qué valores son anómalos para cada CCAA y hemos extraído su posición, tanto a nivel de fila como columna. Al observar a qué mes pertencen nos hemos dado cuenta que hay una gran presencia de meses del año 2020 y 2021, periodos que pertencen al Covid y al post-Covid.
+
+
+
+```{r}
+# Suponiendo que tienes un DataFrame llamado df
+# Utiliza la función colMeans() para calcular la media de cada columna
+medias <- colMeans(ipitb, na.rm = TRUE)
+media_general <- sum(medias) / length(medias)
+barplot(medias[order(medias, decreasing = TRUE)],las =2)# Suponiendo que ya has calculado las medias y las has almacenado en el vector "medias"
+abline(h = media_general, col = "red")
+
+par(pty="s")
+
+
+```
+En el gráfico de las medias, se observa claramente que las Islas Baleares y las Canarias presentan los valores más altos para el Índice de Producción Industrial (IPI). Esto puede atribuirse principalmente a la sólida presencia de industrias turísticas, actividades aeroportuarias y otras iniciativas económicas que desempeñan un papel significativo en el cálculo del IPI en estas comunidades autónomas.
+
+Resulta sorprendente que la Comunidad Valenciana exhiba el tercer IPI más bajo en comparación con otras regiones, dado su considerable volumen de turismo e industria. Esta disparidad podría sugerir una serie de posibles explicaciones, como la existencia de factores específicos que limitan el crecimiento industrial en la región, problemas estructurales en la base productiva o desafíos relacionados con la diversificación económica. Sería necesario realizar un análisis más detallado para comprender completamente esta discrepancia y determinar los factores subyacentes que contribuyen a la posición relativa de la Comunidad Valenciana en términos de producción industrial.
+
+
+**Conclusión**
+Tras los resultados obtenidos y la información extraída en un primera análisis podemos concluir de que sería interesante incluir el ipi como variable para comunidad, puesto que nos daría información del funcionamiento de cada uno y nos ayudaría a extraer patrones entre las diferentes CCAA, por tanto sería importante para la consecución del objetivo 3.

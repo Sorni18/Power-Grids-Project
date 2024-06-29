@@ -1,0 +1,159 @@
+---
+title: "Ocupados en España"
+author: "Víctor Máñez"
+date: "`r Sys.Date()`"
+output:
+  word_document: default
+  html_document: default
+---
+Primero. Cargamos las librerías que nos serán necesarias para el tratamiento y posterior análisis de los datos:
+```{r Librerías necesarias, include=FALSE}
+library(mapSpain)
+library(tidyverse)
+library(ggplot2)
+library(readxl)
+library(shiny)
+library(leaflet)
+library(plotly)
+library(sf)
+library(data.table)
+library(tibble)
+library(tidyr)
+library(dplyr)
+```
+
+Vamos ahora con el procesamiento de los datos, cargamos el fichero correspondiente a los datos de **Ocupados en Industria** para el territorio Español, estos datos en formato csv conitenen los porcentajes de empleados en el sector industrial por provincia. Estos vienen con un nivel de granularidad trimestral y comprenden del año 2011 al 2023.
+```{r Prepara Datos}
+
+#Leemos el archivo de datos
+datos = read.csv("DATOS HITO 2/Industria-ocupados/provincia.xlsx")
+
+#Sacamos el total nacional de la primera fila
+total_nacional = datos[1,]
+#Eliminamos la fila de Total Nacional para el estudio por CCAA
+datos = datos[-1,]
+#Reseteamos los índices de fila
+rownames(datos) = NULL
+
+#Cambiamos el nombre de la columna de provincias
+datos = datos %>% rename(Provincia = X)
+#Quitamos los números que aparecen al lado de la provincia (recortamos) para que nuestros análisis sean más limpios
+datos$Provincia <- gsub("\\d+", "", datos$Provincia)
+
+#Creamos un vector que asocie a cada Provincia su CCAA correspondiente
+comunidades_autonomas = c("Castilla - La Mancha", "Comunitat Valenciana", "Andalucía", "País Vasco", "Asturias, Principado de", "Castilla y León", "Extremadura", "Balears, Illes", "Cataluña", "País Vasco", "Castilla y León", "Extremadura", "Andalucía", "Cantabria", "Comunitat Valenciana", "Castilla - La Mancha", "Andalucía", "Galicia", "Castilla - La Mancha", "País Vasco", "Cataluña", "Andalucía", "Castilla - La Mancha", "Andalucía", "Andalucía", "Castilla y León", "Castilla y León", "Cataluña", "Galicia", "Madrid, Comunidad de", "Andalucía", "Murcia, Región de", "Navarra, Comunidad Foral de", "Galicia", "Castilla y León", "Canarias", "Galicia", "Rioja, La", "Castilla y León", "Canarias", "Castilla y León", "Andalucía", "Castilla y León", "Cataluña", "Aragón", "Castilla - La Mancha", "Comunitat Valenciana", "Castilla y León", "Castilla y León", "Aragón", "Ceuta", "Melilla")
+#La añadimos como 2a columna, para comprobar
+datos <- cbind(Provincia = datos[, 1], CCAA = comunidades_autonomas, datos[, -1])
+
+#Después de comprobar que cada provincia corresponde a la CCAA que le toca, eliminamos esa columna para hacer los análisis
+datos = datos[, -1]
+
+tipos_de_datos = sapply(datos, class)
+#Como las columnas de los trimestres están en formato character, cambiamos la coma decimal por un punto para que así lo pueda reconocer R como un valor real
+datos[, 2:ncol(datos)] <- lapply(datos[, 2:ncol(datos)], function(x) gsub(",", ".", x))
+
+# Cogemos las columnas de los trimestres que son las que nos interesa cambiar el tipo
+columnas_a_convertir <- names(datos)[2:ncol(datos)]
+
+# Convertimos las columnas a numéricas
+datos[columnas_a_convertir] <- lapply(datos[columnas_a_convertir], as.numeric)
+
+#Agrupamos ahora todas las provincias en CCAA con la función aggregate, lo haremos con la media de los valores de cada provincia dentro de la CCAA
+datos_agrupado <- aggregate(. ~ CCAA, data = datos, FUN = mean)
+
+#Trasponemos nuestros datos para poder hacer que cada columna se refiera a las CCAA
+datos_transpuesto = as.data.frame(t(datos_agrupado))
+#Usamos la primera fila como el encabezado de nuestro DF, que son precisamente las CCAA
+colnames(datos_transpuesto) = datos_transpuesto[1,]
+#Eliminamos la fila con los nombres de las CCAA para que no nos moleste en los análisis que hagamos
+datos_transpuesto = datos_transpuesto[-1, ]
+```
+
+Una vez hecha la limpieza y la transformación de datos para tenerlos en el formato adecuado, proseguimos haciendo el análisis exploratorio de los mismos:
+
+```{r Análisis Exploratorio}
+#Convertimos las variables a naturaleza cuantitativa
+datos_numericos = mutate_all(datos_transpuesto, as.numeric)
+
+#Extraemos la matriz de correlación de nuestros datos
+matriz_corr = cor(datos_numericos)
+# Creamos un mapa de calor para visualizar las correlaciones
+options(repr.plot.width = 100, repr.plot.height = 8)
+ggplot(data = reshape2::melt(matriz_corr), aes(Var1, Var2, fill = value)) +
+  geom_tile() +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0, limit = c(-1,1),
+                       breaks = c(seq(-1, 1, by = 0.2))) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size=6),
+        axis.text.y = element_text(size = 6)) +
+  labs(title = "Correlaciones por CCAA",
+       x = "", y = "") +
+  coord_fixed()
+```
+Vamos ahora con el resumen de nuestros datos, separado por Comunidades Autónomas, donde vemos que los datos son los que cabría espeerar en cuanto al índice de empleabilidad en industria, las CCAA que predominan son la Comunidad Foral de Navarra, Islas Baleares, La Rioja, País Vasco, etc.
+```{r}
+summary(datos_numericos)
+```
+```{r}
+diag(matriz_corr) = 0
+max_correlation = max(matriz_corr)
+max_location = which(matriz_corr == max_correlation, arr.ind = TRUE)
+print(max_correlation)
+max_location
+```
+Extraemos ahora las dos Comunidades con mayor correlación que sorprendentemente son Galicia y la Comunitat Valenciana con un valor de `r max_correlation`. Aunque como vemos las correlaciones entre las distintas regiones son del todo variadas.
+
+```{r Gráfico de Caja}
+#Extraemos el número de variables que tenemos para colorear el boxplot
+l = length(colnames(datos_numericos))
+#Extraemos la media total para dibujar una línea con ella
+media_total = rowMeans(datos_numericos[, -1], na.rm = TRUE)
+#Creamos el boxplot
+boxplot(datos_numericos, col = rainbow(l), ylab = "Porcentaje Emp. Industria", main = "Boxplot de la prop. de Emp. Ind. por Comunidad Autónoma", las=2) #+
+#Añadimos la línea media de los valores
+#abline(h = media_total, col = "red", lwd = 2)
+```
+Como vemos los comportamientos de cada una de las Comunidades Autónomas son del todo distintas, pese a que se pueda ver alguna similitud entre los valores del Principado de Asturias, Castilla y León, Castilla La Mancha, Cantabria y Galicia al estar todas sobre la línea de la media. LLama la atención el ver como las dos comunidades autónomas más parecidas (según correlación) que eran la CV y Galicia, parece ser que deben su correlación a algunos de los datos extremos de nuestra tierra.
+
+Pasamos ahora con el gráfico de líneas que nos permita identificar de un vistazo lo que ya hemos aventurado un poco con el summary() anterior, lo bueno de este gráfico es que nos ayudará a poder comparar todas nuestras variables de manera sencilla.
+```{r Gráfico de Lineas}
+#Creamos otro dataframe para hacer los gráficos de líneas
+df = datos_numericos
+#Añadimos la columna de los trimestres para poder acceder a ella
+df$Trimestre = rownames(df)
+#Volvemos a hacer que los índices de las filas sean una secuencia numérica 1,2,3...
+rownames(df) = NULL
+
+library(ggplot2)
+class(df$Trimestre)
+df$Andalucía
+ggplot(data = df, aes(x = Trimestre)) +
+  geom_line(aes(y = Andalucía, color = "Andalucía", group = 1)) +
+  geom_line(aes(y = Aragón, color = "Aragón", group = 1)) +
+  geom_line(aes(y = `Asturias, Principado de`, color = "Asturias, Principado de", group = 1)) +
+  geom_line(aes(y = `Balears, Illes`, color = "Balears, Illes", group = 1)) +
+  geom_line(aes(y = Canarias, color = "Canarias", group = 1)) +
+  geom_line(aes(y = Cantabria, color = "Cantabria", group = 1)) +
+  geom_line(aes(y = `Castilla y León`, color = "Castilla y León", group = 1)) +
+  geom_line(aes(y = `Castilla - La Mancha`, color = "Castilla - La Mancha", group = 1)) +
+  geom_line(aes(y = Cataluña, color = "Cataluña", group = 1)) +
+  geom_line(aes(y = `Comunitat Valenciana`, color = "Comunitat Valenciana", group = 1)) +
+  geom_line(aes(y = Extremadura, color = "Extremadura", group = 1)) +
+  geom_line(aes(y = Galicia, color = "Galicia", group = 1)) +
+  geom_line(aes(y = `Madrid, Comunidad de`, color = "Madrid, Comunidad de", group = 1)) +
+  geom_line(aes(y = `Murcia, Región de`, color = "Murcia, Región de", group = 1)) +
+  geom_line(aes(y = `Navarra, Comunidad Foral de`, color = "Navarra, Comunidad Foral de", group = 1)) +
+  geom_line(aes(y = `País Vasco`, color = "País Vasco", group = 1)) +
+  geom_line(aes(y = `Rioja, La`, color = "Rioja, La", group = 1)) +
+  geom_line(aes(y = Ceuta, color = "Ceuta", group = 1)) +
+  geom_line(aes(y = Melilla, color = "Melilla", group = 1)) +
+  labs(x = "Trimestre", y = "Valor") +
+  theme(axis.text.x = element_blank(),
+        legend.text = element_text(size=6),
+        legend.title = element_text(size = 9),
+        legend.box.spacing = unit(5, "mm"),
+        legend.key.size = unit(0.3, "cm")) +
+  guides(color = guide_legend(ncol = 2)) +
+  scale_color_manual(name = "Comunidad Autónoma", values = c("Andalucía" = "blue", "Aragón" = "red","Asturias, Principado de" = "green","Balears, Illes" = "purple", "Canarias" = "orange","Cantabria" = "pink", "Castilla y León" = "brown","Castilla - La Mancha" = "yellow", "Cataluña" = "cyan", "Comunitat Valenciana" = "gray", "Extremadura" = "magenta", "Galicia" = "navy", "Madrid, Comunidad de" = "maroon", "Murcia, Región de" = "darkolivegreen", "Navarra, Comunidad Foral de" = "darkcyan", "País Vasco" = "violet", "Rioja, La" = "darkorchid", "Ceuta" = "darkgreen", "Melilla" = "darkred"))
+```
+Como vemos la comunidad que más IPI tiene en cuanto a proporción es Navarra aunque los últimos años ha sido superada por las Islas Baleares (esto se puede deber a que al ser una isla todos los puertos son considerados como industria...), estas dos van seguidas por el País Vasco.

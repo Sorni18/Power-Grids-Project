@@ -1,0 +1,175 @@
+---
+title: "objetivo_2"
+author: "prado"
+date: "2024-04-18"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readxl)
+library(dplyr)
+library(corrplot) 
+library(ggplot2)
+library(GGally)
+```
+
+## R Markdown
+
+
+```{r}
+europa="DATOS HITO 2/europa.xlsx"
+hojas=excel_sheets(europa); hojas
+```
+```{r}
+hojas=setdiff(hojas, c("Contents", "footnotes and sources", "energy flows-energy balances", "energy products-energy balances"))
+hojas
+```
+
+
+Los datos de analizar es un balance de energía en Mtoe
+```{r}
+analizar=function(hoja){
+  excel=read_excel(europa, sheet=hoja)
+  excel=excel[-c(255:545), ]
+  excel=excel[-c(1:10), ]
+  excel=excel[, -c(1,2)]
+  colnames(excel)=c("Balance", c(1990:2020))
+  filas_con_na <- which(is.na(excel$Balance))
+  inicio_bloque <-1
+  fin_bloque <- filas_con_na[1] - 1
+  nombre_bloque <- excel[inicio_bloque, "Balance"]
+  for (j in inicio_bloque:fin_bloque){
+    excel[j, 1]=paste(nombre_bloque, excel[j, 1], sep = "-")
+  }
+  for (i in 1:(length(filas_con_na) - 1)) {
+  inicio_bloque <- filas_con_na[i] +1
+  fin_bloque <- filas_con_na[i + 1]-1
+  nombre_bloque <- excel[inicio_bloque, "Balance"]
+  for (j in inicio_bloque:fin_bloque){
+    excel[j, 1]=paste(nombre_bloque, excel[j, 1], sep = "-")
+  }
+  }
+  
+  excel <- excel[complete.cases(excel$`1990`), ]
+  
+  excel[114, 1]="Transformation Input-Electricity producers-Solid fossil fuels"
+  excel[115, 1]="Transformation Input-Electricity producers-Manufacturated gases"
+  excel[116, 1]="Transformation Input-Electricity producers-Peat and peat products"
+  excel[117, 1]="Transformation Input-Electricity producers-Oil shale and oil sands"
+  excel[118, 1]="Transformation Input-Electricity producers-Oil and petroleum products"
+  excel[119, 1]="Transformation Input-Electricity producers-Nuclear"
+  excel[120, 1]="Transformation Input-Electricity producers-Natural gas"
+  excel[121, 1]="Transformation Input-Electricity producers-Renewables and biofuels"
+  excel[122, 1]="Transformation Input-Electricity producers-Waste, non-renewable"
+  excel[123, 1]="Transformation Input-Electricity producers-Derived heat for electricity production"
+  excel[124, 1]="Transformation Input-Electricity producers-Electricity from pumped storage"
+
+  excel[126, 1]="Transformation Input-Heat producers-Solid fossil fuels"
+  excel[127, 1]="Transformation Input-Heat producers-Manufacturated gases"
+  excel[128, 1]="Transformation Input-Heat producers-Peat and peat products"
+  excel[129, 1]="Transformation Input-Heat producers-Oil shale and oil sands"
+  excel[130, 1]="Transformation Input-Heat producers-Oil and petroleum products"
+  excel[131, 1]="Transformation Input-Heat producers-Nuclear"
+  excel[132, 1]="Transformation Input-Heat producers-Natural gas"
+  excel[133, 1]="Transformation Input-Heat producers-Renewables and biofuels"
+  excel[134, 1]="Transformation Input-Heat producers-Waste, non-renewable"
+  excel[135, 1]="Transformation Input-Heat producers-Electric boilers and electrically driven heat pumps"
+
+  excel[137, 1]="Transformation Input-CHP producers-Solid fossil fuels"
+  excel[138, 1]="Transformation Input-CHP producers-Manufacturated gases"
+  excel[139, 1]="Transformation Input-CHP producers-Peat and peat products"
+  excel[140, 1]="Transformation Input-CHP producers-Oil shale and oil sands"
+  excel[141, 1]="Transformation Input-CHP producers-Oil and petroleum products"
+  excel[142, 1]="Transformation Input-CHP producers-Nuclear"
+  excel[143, 1]="Transformation Input-CHP producers-Natural gas"
+  excel[144, 1]="Transformation Input-CHP producers-Renewables and biofuels"
+  excel[145, 1]="Transformation Input-CHP producers-Waste, non-renewable"
+
+  excel[161, 1]="Transformation Output-CHP producers-Electricity"
+  excel[162, 1]="Transformation Output-CHP producers-Heat"
+  
+  excel=as.data.frame(excel)
+  rownames(excel)=excel$Balance
+  excel <- subset(excel, select = -Balance)
+
+  excel=t(excel)
+  excel <- apply(excel, 2, as.numeric)
+
+  
+  importantes <- c("Production-Production", "Imports-Imports", "Exports-Exports", "Net Imports-Net Imports", "Gross available energy-Gross available energy", "International maritime bunkers-International maritime bunkers", "Gross inland consumption-Gross inland consumption", "International aviation-International aviation", "Total energy supply-Total energy supply", "Transformation Input-Transformation Input", "Transformation Output-Transformation Output", "Transformation Losses-Transformation Losses", "Energy Sector-Energy Sector", "Distribution losses-Distribution losses", "Available for final consumption-Available for final consumption", "Final non-energy consumption-Final non-energy consumption", "Final energy consumption")
+  
+  aed <- excel[, importantes]
+  
+  nombres <- sapply(strsplit(importantes, "-"), `[`, 1)
+
+  
+  colnames(aed) <- nombres
+  aed <- na.omit(aed)
+
+  print(summary(aed))
+  
+
+  año=c(1990:2020)
+  grafico <- ggplot() +
+  geom_line(data = aed, aes(x = año, y = Production, color = "Production")) +
+  geom_line(data = aed, aes(x = año, y = Imports, color = "Imports")) +
+  geom_line(data = aed, aes(x = año, y = Exports, color = "Exports")) +
+  geom_line(data = aed, aes(x = año, y = `Net Imports`, color = "Net Imports")) +
+  geom_line(data = aed, aes(x = año, y = `Gross available energy`, color = "Gross available energy")) +
+  geom_line(data = aed, aes(x = año, y = `International maritime bunkers`, color = "International maritime bunkers")) +
+  geom_line(data = aed, aes(x = año, y = `Gross inland consumption`, color = "Gross inland consumption")) +
+  geom_line(data = aed, aes(x = año, y = `International aviation`, color = "International aviation")) +
+  geom_line(data = aed, aes(x = año, y = `Total energy supply`, color = "Total energy supply")) +
+  geom_line(data = aed, aes(x = año, y = `Transformation Input`, color = "Transformation Input")) +
+  geom_line(data = aed, aes(x = año, y = `Transformation Output`, color = "Transformation Output")) +
+  geom_line(data = aed, aes(x = año, y = `Transformation Losses`, color = "Transformation Losses")) +
+  geom_line(data = aed, aes(x = año, y = `Energy Sector`, color = "Energy Sector")) +
+  geom_line(data = aed, aes(x = año, y = `Distribution losses`, color = "Distribution losses")) +
+  geom_line(data = aed, aes(x = año, y = `Available for final consumption`, color = "Available for final consumption")) +
+  geom_line(data = aed, aes(x = año, y = `Final non`, color = "Final non")) +
+  geom_line(data = aed, aes(x = año, y = `Final energy consumption`, color = "Final energy consumption")) +
+  labs(x = "Año", y = "Energía (Mtoe)") + ggtitle(hoja)+
+  scale_color_manual(name = "Balance Eléctrico",
+                     values = c("Production" = "blue", "Imports" = "red",
+                                "Exports" = "green",
+                                "Net Imports" = "purple", "Gross available energy" = "orange",
+                                "International maritime bunkers" = "pink", "Gross inland consumption" = "brown",
+                                "International aviation" = "yellow", "Total energy supply" = "cyan",
+                                "Transformation Input" = "gray", "Transformation Output" = "magenta",
+                                "Transformation Losses" = "navy", "Energy Sector" = "maroon",
+                                "Distribution losses" = "darkolivegreen",
+                                "Available for final consumption" = "darkcyan",
+                                "Final non" = "violet", "Final energy consumption" = "darkorchid"))
+  
+  print(grafico)
+  
+  colnames(aed) <- abbreviate(colnames(aed), minlength = 10)
+  
+  matriz_cor <- cor(aed)
+  matriz_cor <- replace(matriz_cor, is.na(matriz_cor), 0)
+  corrplot(matriz_cor, method = "color", col = colorRampPalette(c("blue", "white", "red"))(100), tl.col = "black", tl.offset = 1.5)
+  title(hoja, line=-18)
+
+  sd <- apply(aed, 2, sd)
+  mu = colMeans(aed)
+  cv=sd/mu
+  print(cv)
+  
+  boxplot(aed, log="", las=2)
+  title(hoja)
+}
+```
+
+```{r}
+lapply(hojas, analizar)
+```
+Podemos observar en la matriz de correlación correspondiente a los datos de la Unión Europea que las agrupaciones (Distribution Losses, Available for final consumption, Final non-energy consumption, Final energy consumption), (Total energy supply, Transformation Input, Transformation Output, Transformation Losses), (Net Imports, Gross available energy, International maritime bunkers, Gross inland consumption) están positivamente correlacionadas entre sí. En cambio, destacan las correlaciones negativas entre Producción y Exportaciones o Importaciones; o entre Exportaciones o Importaciones con el Sector energético. Sin embargo, estos patrones no ocurren en todos los países miembros. Por ejemplo, en Bélgica las Importaciones y Exportaciones no están negativamentes correlacionadas con la Producción o el Sector Energético. Y en Hungría hay correlaciones negativas entre variables que anteriormente pensabamos que estaban agrupadas.
+
+En cuanto al gráfico de línea la tónica general es la que sigue la Unión Europea, no obstante, cada país ha vivido distintos contextos entre 1990 y 2020 provocando importantes variaciones entre ellos. En el conjunto de datos de la Unión Europea ha habido un aumento general de las variables estudiadas hasta 2005, donde inicia una ligera tendencia negativa que llega hasta 2020. Es significativo el aumento de las importaciones.
+
+En cambio, en países como Austria el aumento de las variables estudiadas ha sido constante desde 1990 a 2020 mientras que en países del este de Europa como Bulgaria estas variables no han cesado de decrecer.
+
+Los gráficos de caja y bigotes muestran el valor medio de las variables y su variabilidad. En la Unión Europea observamos que la cantidad de energía importada es mayor que la exportada (con una variabilidad importante en ambos casos) y qué variables como International maritime bunkers a penas tienen importancia mientras que las variables que aglutinan grandes cantidadades de energía se encuentran a lo alto del gráfico. Los pocos datos atípicos apreciados no suponen un gran problema. En países como Rumanía encontramos un mayor número de datos atípicos, debido al pronunciado decrecimiento energético que ha sufrido el país en las últimas décadas.
+
+En conclusión, los datos tienen la variabilidad y el interés suficientes como para fundamentar el segundo objetivo del Proyecto

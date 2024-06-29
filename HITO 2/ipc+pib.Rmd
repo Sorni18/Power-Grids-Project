@@ -1,0 +1,307 @@
+---
+title: "IPC+PIB"
+author: "prado"
+date: "2024-03-29"
+output: html_document
+---
+
+## R Markdown
+Aquí he cargado las diferentes librerías que nos hacen falta
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggplot2)
+library(readxl)
+library(shiny)
+library(leaflet)
+library(plotly)
+library(sf)
+library(data.table)
+library(tibble)
+library(tidyr)
+library(corrplot)
+```
+
+Estos son los datos del Producto Interior Bruto de las CCAA de España.
+```{r 1}
+pib <- as.data.frame(read_xlsx("DATOS HITO 2/Datos_PIB.xlsx"))
+print(pib)
+print(summary(pib))
+```
+```{r 2}
+ccaa <- gsub("^\\d+\\s+", "", colnames(pib))
+colnames(pib)<-ccaa
+print(pib)
+```
+
+```{r 3}
+año <- pib$...1
+rownames(pib) <- año
+pib$...1 <- NULL
+print(pib)
+```
+Realizamos una matriz de correlaciones para observar la naturaleza de la relación entre las diferentes CCAA.
+```{r 4}
+abv_pib <- pib
+colnames(abv_pib) <-abbreviate(colnames(pib))
+matriz_cor <- cor(abv_pib)
+corrplot(matriz_cor, method = "square", col = colorRampPalette(c("blue", "white", "red"))(100), tl.col = "black", tl.offset = 1)
+```
+Podemos percibir que todas las comunidades autonómas están positivamente correlacionas entre sí de manera significativa. Es decir, cuando sube el PIB en una CCAA suele ser porque también ha subido en todo el país.
+
+A continuación analizamos la variabilidad en cada CCAA, para confirmae que los valores no son constantes o casi-constantes:
+```{r 5}
+pibSD = apply(pib, 2, sd)
+pibMU = colMeans(pib)
+pibCV = pibSD/pibMU
+pibCV
+```
+Teniendo en cuenta la naturaleza de los datos con los que trabajamos, no podemos decir que estas variables sean casi-constantes, puesto que una pequeña variación en el PIB tiene una gran influencia en la economía de un país.
+
+```{r 6}
+boxplot(pib, log="y", las=2)
+```
+Conforme a los resultados de los boxplots, podemos confirmar que no existen valores atípicos en las CCAAs sometidas a estudio. Teniendo en cuenta que es un el PIB es un valor que avanza gradualmente, este resultado es lógico.
+
+Ahora realizamos un gráfico de lineas, para ver que comunidades autonómas destacan económicamente sobre el resto, y cómo ha sido su evolución a lo largo de los últimos años.
+```{r 7}
+pib$año=rev(2011:2022)
+rownames(pib)<-pib$año
+
+ggplot() +
+  geom_line(data = pib, aes(x = año, y = Andalucía, color = "Andalucía")) +
+  geom_line(data = pib, aes(x = año, y = Aragón, color = "Aragón")) +
+  geom_line(data = pib, aes(x = año, y = `Asturias, Principado de`, color = "Asturias, Principado de")) +
+  geom_line(data = pib, aes(x = año, y = `Balears, Illes`, color = "Balears, Illes")) +
+  geom_line(data = pib, aes(x = año, y = Canarias, color = "Canarias")) +
+  geom_line(data = pib, aes(x = año, y = Cantabria, color = "Cantabria")) +
+  geom_line(data = pib, aes(x = año, y = `Castilla y León`, color = "Castilla y León")) +
+  geom_line(data = pib, aes(x = año, y = `Castilla - La Mancha`, color = "Castilla - La Mancha")) +
+  geom_line(data = pib, aes(x = año, y = Cataluña, color = "Cataluña")) +
+  geom_line(data = pib, aes(x = año, y = `Comunitat Valenciana`, color = "Comunitat Valenciana")) +
+  geom_line(data = pib, aes(x = año, y = Extremadura, color = "Extremadura")) +
+  geom_line(data = pib, aes(x = año, y = Galicia, color = "Galicia")) +
+  geom_line(data = pib, aes(x = año, y = `Madrid, Comunidad de`, color = "Madrid, Comunidad de")) +
+  geom_line(data = pib, aes(x = año, y = `Murcia, Región de`, color = "Murcia, Región de")) +
+  geom_line(data = pib, aes(x = año, y = `Navarra, Comunidad Foral de`, color = "Navarra, Comunidad Foral de")) +
+  geom_line(data = pib, aes(x = año, y = `País Vasco`, color = "País Vasco")) +
+  geom_line(data = pib, aes(x = año, y = `Rioja, La`, color = "Rioja, La")) +
+  geom_line(data = pib, aes(x = año, y = Ceuta, color = "Ceuta")) +
+  geom_line(data = pib, aes(x = año, y = Melilla, color = "Melilla")) +
+  labs(x = "Año", y = "Valor") +
+  scale_color_manual(name = "Comunidad Autónoma",
+                     values = c("Andalucía" = "blue", "Aragón" = "red",
+                                "Asturias, Principado de" = "green",
+                                "Balears, Illes" = "purple", "Canarias" = "orange",
+                                "Cantabria" = "pink", "Castilla y León" = "brown",
+                                "Castilla - La Mancha" = "yellow", "Cataluña" = "cyan",
+                                "Comunitat Valenciana" = "gray", "Extremadura" = "magenta",
+                                "Galicia" = "navy", "Madrid, Comunidad de" = "maroon",
+                                "Murcia, Región de" = "darkolivegreen",
+                                "Navarra, Comunidad Foral de" = "darkcyan",
+                                "País Vasco" = "violet", "Rioja, La" = "darkorchid",
+                                "Ceuta" = "darkgreen", "Melilla" = "darkred"))
+colnames(pib)
+```
+
+```{r}
+pib=select(pib, -año)
+```
+
+
+```{r}
+medias <- colMeans(pib[, ], na.rm = TRUE)
+barplot(medias, las = 2, main = "PIB por CCAA", xlab = "", col = "skyblue", border = "blue", horiz = FALSE)
+abline(h = mean(medias), col = "red")
+```
+Se puede apreciar que las comunidades autonómas más pobladas son aquellas con el producto interior bruto más alto. En cuánto a la evolución, todas inician con una tendencia negativa que toca fondo en 2012 para posteriormente incrementar continuadamente hasta 2020. Debido a la pandemia hay un pronunciado pico negativo, que es rápidamente remediado en los años posteriores.
+
+Dada la naturaleza de nuestro análisis, pensamos que los valores absolutos del pib pueden no tener el interés suficente para nuestro análisis, puesto que no difieren significativamente de los datos de población.
+
+
+Por lo tanto, decidimos usar para nuestro objetivo datos de PIB per cápita.
+```{r 8}
+pib_cap<-read_xlsx("DATOS HITO 2/Datos_PIBperCap.xlsx")
+print(pib_cap)
+```
+
+```{r 9}
+ccaa <- gsub("^\\d+\\s+", "", colnames(pib_cap))
+colnames(pib_cap)<-ccaa
+print(pib_cap)
+```
+
+```{r 3}
+año <- pib_cap$...1
+rownames(pib_cap) <- año
+pib_cap$...1 <- NULL
+print(pib_cap)
+```
+
+Realizamos una matriz de correlaciones para observar la naturaleza de la relación de las diferentes CCAA.
+
+```{r 10}
+abv_pib_cap <- pib_cap
+colnames(abv_pib_cap) <-abbreviate(colnames(pib_cap))
+matriz_cor <- cor(abv_pib_cap)
+corrplot(matriz_cor, method = "square", col = colorRampPalette(c("blue", "white", "red"))(100), tl.col = "black", tl.offset = 1)
+```
+Sigue habiendo una fuerte relación positiva entre comunidades autonómas, lo que implica que cuando crece la riqueza en una región también lo hace en el resto de la nación.
+
+
+```{r 11}
+pib_capSD = apply(pib_cap, 2, sd)
+pib_capMU = colMeans(pib_cap)
+pib_capCV = pib_capSD/pib_capMU
+pib_capCV
+```
+Los resultados son prácticamente idénticos a los obtenidos en el coeficiente de variación del PIB absoluto, añadiendo la variabilidad de la población en cada región. Las conclusiones son las mismas que para el PIB absouluto. Aunque la variación sea pequeña, un pequeño cambio en el PIB per cápita tiene consecuencias significativas en la economía.
+
+```{r 12}
+boxplot(pib_cap, log="y", las=2)
+```
+Únicamente hay un valor atípico en Melilla, que no hace falta tratar puesto que se explica en el contexto de pronunciado crecimiento económico en la región ,este aumento también se percibe en Ceuta.
+
+```{r 13}
+pib_cap$año=rev(2011:2022)
+rownames(pib_cap)<-pib_cap$año
+
+ggplot() +
+  geom_line(data = pib_cap, aes(x = año, y = Andalucía, color = "Andalucía")) +
+  geom_line(data = pib_cap, aes(x = año, y = Aragón, color = "Aragón")) +
+  geom_line(data = pib_cap, aes(x = año, y = `Asturias, Principado de`, color = "Asturias, Principado de")) +
+  geom_line(data = pib_cap, aes(x = año, y = `Balears, Illes`, color = "Balears, Illes")) +
+  geom_line(data = pib_cap, aes(x = año, y = Canarias, color = "Canarias")) +
+  geom_line(data = pib_cap, aes(x = año, y = Cantabria, color = "Cantabria")) +
+  geom_line(data = pib_cap, aes(x = año, y = `Castilla y León`, color = "Castilla y León")) +
+  geom_line(data = pib_cap, aes(x = año, y = `Castilla - La Mancha`, color = "Castilla - La Mancha")) +
+  geom_line(data = pib_cap, aes(x = año, y = Cataluña, color = "Cataluña")) +
+  geom_line(data = pib_cap, aes(x = año, y = `Comunitat Valenciana`, color = "Comunitat Valenciana")) +
+  geom_line(data = pib_cap, aes(x = año, y = Extremadura, color = "Extremadura")) +
+  geom_line(data = pib_cap, aes(x = año, y = Galicia, color = "Galicia")) +
+  geom_line(data = pib_cap, aes(x = año, y = `Madrid, Comunidad de`, color = "Madrid, Comunidad de")) +
+  geom_line(data = pib_cap, aes(x = año, y = `Murcia, Región de`, color = "Murcia, Región de")) +
+  geom_line(data = pib_cap, aes(x = año, y = `Navarra, Comunidad Foral de`, color = "Navarra, Comunidad Foral de")) +
+  geom_line(data = pib_cap, aes(x = año, y = `País Vasco`, color = "País Vasco")) +
+  geom_line(data = pib_cap, aes(x = año, y = `Rioja, La`, color = "Rioja, La")) +
+  geom_line(data = pib_cap, aes(x = año, y = Ceuta, color = "Ceuta")) +
+  geom_line(data = pib_cap, aes(x = año, y = Melilla, color = "Melilla")) +
+  labs(x = "Año", y = "Valor") +
+  scale_color_manual(name = "Comunidad Autónoma",
+                     values = c("Andalucía" = "blue", "Aragón" = "red",
+                                "Asturias, Principado de" = "green",
+                                "Balears, Illes" = "purple", "Canarias" = "orange",
+                                "Cantabria" = "pink", "Castilla y León" = "brown",
+                                "Castilla - La Mancha" = "yellow", "Cataluña" = "cyan",
+                                "Comunitat Valenciana" = "gray", "Extremadura" = "magenta",
+                                "Galicia" = "navy", "Madrid, Comunidad de" = "maroon",
+                                "Murcia, Región de" = "darkolivegreen",
+                                "Navarra, Comunidad Foral de" = "darkcyan",
+                                "País Vasco" = "violet", "Rioja, La" = "darkorchid",
+                                "Ceuta" = "darkgreen", "Melilla" = "darkred"))
+```
+```{r}
+pib_cap <- select(pib_cap, -año)
+print(pib_cap)
+```
+
+```{r}
+medias <- colMeans(pib_cap[, ], na.rm = TRUE)
+barplot(medias, las = 2, main = "PIB per Cápita por CCAA", xlab = "", col = "skyblue", border = "blue", horiz = FALSE)
+abline(h = mean(medias), col = "red")
+```
+
+
+Observamos que los datos del PIB per Cápita siguen la misma tendencia que los datos de PIB absoluto, pero podemos discernir que CCAA son más activas económicamente, que es la información que interesa cruzar con los datos de producción y demanda energética.
+
+
+
+A continuación, analizaremos los datos respectivos al Índice de Precios del Consumidor o IPC por comunidades autónomas.
+
+```{r}
+ipc=read_xlsx("DATOS HITO 2/50913.xlsx")
+print(ipc)
+```
+
+```{r}
+ccaa <- gsub("^\\d+\\s+", "", colnames(ipc))
+colnames(ipc)<-ccaa
+```
+
+Realizamos una matriz de correlación para analizar la relación entre diferentes comunidades autonómas.
+```{r}
+abv_ipc <- select(ipc, -...1)
+colnames(abv_ipc) <-abbreviate(colnames(select(ipc, -...1)))
+matriz_cor <- cor(abv_ipc)
+corrplot(matriz_cor, method = "square", col = colorRampPalette(c("blue", "white", "red"))(100), tl.col = "black", tl.offset = 1)
+```
+
+Todas las comunidades autonómas están muy fuertemente correlacionadas entre sí, cuando sube el IPC en una región es porque también sube en el resto.
+
+```{r}
+ipcSD = apply(select(ipc, -...1), 2, sd)
+ipcMU = colMeans(select(ipc, -...1))
+ipcCV = ipcSD/ipcMU
+ipcCV
+```
+
+La variabilidad no es especialmente alta en ninguna comunidad autónoma. Este dato no es sorprendente ya que el IPC es un índice macroeconómico que únicamente sufre grandes cambios cuando hay variaciones importantes en la economía.
+
+```{r}
+boxplot(select(ipc, -...1), log="y", las=2)
+```
+
+Todas las comunidades autonómas tienen la misma distribución, media entre 95 y 100 y un grupo de observaciones atípicas por encima de 105. Estos datos no deben ser eliminados puesto que muestran el período de inflación producido en España tras el COVID y la Guerra de Ucrania.
+
+```{r}
+mes=rev(1:156)
+
+ggplot() +
+  geom_line(data = ipc, aes(x = mes, y = Andalucía, color = "Andalucía")) +
+  geom_line(data = ipc, aes(x = mes, y = Aragón, color = "Aragón")) +
+  geom_line(data = ipc, aes(x = mes, y = `Asturias, Principado de`, color = "Asturias, Principado de")) +
+  geom_line(data = ipc, aes(x = mes, y = `Balears, Illes`, color = "Balears, Illes")) +
+  geom_line(data = ipc, aes(x = mes, y = Canarias, color = "Canarias")) +
+  geom_line(data = ipc, aes(x = mes, y = Cantabria, color = "Cantabria")) +
+  geom_line(data = ipc, aes(x = mes, y = `Castilla y León`, color = "Castilla y León")) +
+  geom_line(data = ipc, aes(x = mes, y = `Castilla - La Mancha`, color = "Castilla - La Mancha")) +
+  geom_line(data = ipc, aes(x = mes, y = Cataluña, color = "Cataluña")) +
+  geom_line(data = ipc, aes(x = mes, y = `Comunitat Valenciana`, color = "Comunitat Valenciana")) +
+  geom_line(data = ipc, aes(x = mes, y = Extremadura, color = "Extremadura")) +
+  geom_line(data = ipc, aes(x = mes, y = Galicia, color = "Galicia")) +
+  geom_line(data = ipc, aes(x = mes, y = `Madrid, Comunidad de`, color = "Madrid, Comunidad de")) +
+  geom_line(data = ipc, aes(x = mes, y = `Murcia, Región de`, color = "Murcia, Región de")) +
+  geom_line(data = ipc, aes(x = mes, y = `Navarra, Comunidad Foral de`, color = "Navarra, Comunidad Foral de")) +
+  geom_line(data = ipc, aes(x = mes, y = `País Vasco`, color = "País Vasco")) +
+  geom_line(data = ipc, aes(x = mes, y = `Rioja, La`, color = "Rioja, La")) +
+  geom_line(data = ipc, aes(x = mes, y = Ceuta, color = "Ceuta")) +
+  geom_line(data = ipc, aes(x = mes, y = Melilla, color = "Melilla")) +
+  labs(x = "Mes", y = "Valor") +
+  scale_color_manual(name = "Comunidad Autónoma",
+                     values = c("Andalucía" = "blue", "Aragón" = "red",
+                                "Asturias, Principado de" = "green",
+                                "Balears, Illes" = "purple", "Canarias" = "orange",
+                                "Cantabria" = "pink", "Castilla y León" = "brown",
+                                "Castilla - La Mancha" = "yellow", "Cataluña" = "cyan",
+                                "Comunitat Valenciana" = "gray", "Extremadura" = "magenta",
+                                "Galicia" = "navy", "Madrid, Comunidad de" = "maroon",
+                                "Murcia, Región de" = "darkolivegreen",
+                                "Navarra, Comunidad Foral de" = "darkcyan",
+                                "País Vasco" = "violet", "Rioja, La" = "darkorchid",
+                                "Ceuta" = "darkgreen", "Melilla" = "darkred"))
+```
+
+A partir de este gráfico podemos percibir que la inflación a partir del COVID se dispará. Desde mediados de 2022 hasta ahora se ha estabilizado, pero los índices no han llegado a disminuir significativamente.
+
+
+```{r}
+medias <- colMeans(select(ipc, -...1)[, ], na.rm = TRUE)
+barplot(medias, las = 2, main = "IPC por CCAA", xlab = "", col = "skyblue", border = "blue", horiz = FALSE)
+abline(h = mean(medias), col = "red")
+```
+
+Las comunidades autonómas tienen prácticamente el mismo IPC medio, lo que confirma la hipótesis de que cuando sube el IPC en una CCAA es porque ha subido en el resto.
+
+Sin embargo, esta poca variablidad entre observaciones hace que no sea intersante añadir esta variable a un análisis de clustering
+
+Únicamente la variable PIB tiene el interés suficiente Como para ser objeto de estudio en nuestro proyecto.

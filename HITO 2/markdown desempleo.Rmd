@@ -1,0 +1,187 @@
+---
+title: "markdown desempleo"
+author: "Aleixandre"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(readxl)
+library(shiny)
+library(leaflet)
+library(plotly)
+library(sf)
+library(data.table)
+library(tibble)
+library(tidyr)
+library(reshape2)
+```
+
+```{r}
+desempleo <- read_xlsx("C:/Users/Angelita/Desktop/C.Datos/2/PROY II/DATOS/OBJETIVO 1/comienzo/desempleo_industria_CCAA.xlsx")
+```
+
+**DESEMPLEO** Ahora pasaremos a analizar el archivo de desempleo industrial en el que realizaremos un tratamiento similar al anterior.
+
+En primer lugar, realizaremos la carga y la adaptación de la tabla a nuestras necesidade y objetivos:
+
+```{r}
+#IMPORTANTE CORRER ESTE BLOQUE DE CÓDIGO LÍNEA A LÍNEA, SI LE DAS AL RUN DE LA CELDA SE BLOQUEA
+
+desempleotn <- desempleo
+#Asociamos a una variable para no modificarlo
+
+mi_var <- desempleotn$...1 #La columna de nombres
+new <- mi_var
+
+desempleotn$...1 <- NULL#La hacemos nula en la duplicada
+rownames(desempleotn) <- new #Los metemos como rownames
+desempleotn <-t(desempleo) #Transponemos
+nombres_columnas <- desempleotn[1, ]
+
+desempleotn <- setNames(desempleotn[-1, ], nombres_columnas)
+colnames(desempleotn)<- nombres_columnas #Metemos el nombre de las columnas
+rows <- rownames(desempleotn) 
+
+
+desempleodet <- matrix(as.numeric(desempleotn), nrow = nrow(desempleotn))
+colnames(desempleodet) <- new
+rownames(desempleodet) <- rows
+```
+
+Con el código de arriba hemos creado las bases necesarias para desarrollar nuestro análisis.
+
+A continuación, realizaremos un resumen para conocer de un golpe de vista algunas similitudes y aspectos similares:
+
+```{r}
+summary(desempleodet)
+```
+
+Después de realizar un resumen estadístico, podemos observar que existen marcadas diferencias en las tasas de desempleo entre las distintas Comunidades Autónomas (CCAA). Estas disparidades son evidentes al analizar la media, aunque esta medida resumida no proporciona un panorama completo. Sin embargo, nos brinda una visión inicial de la magnitud de las diferencias entre las regiones.
+
+A continuación, exploraremos estas disparidades en mayor profundidad mediante diversos gráficos con el objetivo de extraer conclusiones significativas y generar ideas que nos ayuden a entender mejor la situación del desempleo en cada CCAA.
+
+```{r}
+filas_invertidas <- rev(rownames(desempleodet)) #Nuestras base tiene el año 2023 como primera fila, y lo queremos como última para que sea más fácil su interpretación
+
+# Reorganizar las filas del DataFrame
+desempleotb <- desempleodet[filas_invertidas, ]
+# Vector con los números de referencia
+
+fechass <-row.names(desempleotb)
+# Iterar sobre cada número en 'quiero' y crear un gráfico individual
+for (i in colnames(desempleotb)) {
+  par(mar = c(5, 4, 4, 6))
+  # Crear un nuevo gráfico de líneas
+  plot(desempleotb[, i], type = "l", xaxt = "n", ylab = "Valores", main = paste("Gráfico de Líneas DESEMPLEO para la variable", i))
+  # Etiquetas en el eje x
+  axis(1, at = 1:length(fechass), labels = fechass, las = 2)
+}
+```
+
+Tras analizar en una primera vista los gráficos de líneas para las diferentes CCAA, lo que primero hemos observado como patrón principal en la mayor parte de ellas es que se produce un crecimiento del desempleo a partir del segundo y tercer trimestre del año 2020 y que se mantiene otros dos trimestres aproximadamente, hecho que asociamos a la pandemia del "Coronavirus", este hecho supondrá que en algunas ocasiones sean valores anómalos las observaciones asociadas a esos valores, por lo que supondrá un hecho a tener en cuenta de cara a la preparación de modelo, más adelante extraeremos estos anómalos.
+
+A continuación, vamos a crear con la librería ggplot2 un gráfico de líneas representando todas las CCAA para poder ver si se produce algún patrón similar.
+
+```{r}
+# Crear el gráfico usando ggplot2
+ggplot(desempleotb, aes( x =fechass))+
+  geom_line( aes( y = `Comunidad Valenciana`, color="Comunidad Valenciana", group=1))+
+  geom_line(aes(y = Andalucía, color = "Andalucía", group = 1)) +
+  geom_line(aes(y = Aragón, color="Aragón", group = 1)) +
+  geom_line(aes(y = Asturias,color="Asturias", group = 1)) +
+  geom_line(aes(y = Baleares,color="Baleares", group = 1)) +
+  geom_line(aes(y = Canarias,color="Canarias", group = 1)) +
+  geom_line(aes(y = Cantabria,color="Cantabria", group = 1)) +
+  geom_line(aes(y = `Castilla y León`,color="Castilla y León", group = 1)) +
+  geom_line(aes(y = `Castilla-La Mancha`, color = "Castilla-La Mancha", group = 1)) +
+  geom_line(aes(y = Cataluña,color="Cataluña", group = 1)) +
+  geom_line(aes(y = Galicia,color="Galicia", group = 1)) +
+  geom_line(aes(y = Madrid,color="Madrid", group = 1)) +
+  geom_line(aes(y = Murcia,color="Murcia", group = 1)) +
+  geom_line(aes(y = Navarra,color="Navarra", group = 1))+
+  geom_line(aes(y = `País Vasco`,color="País Vasco", group = 1)) +
+  geom_line(aes(y = `La Rioja`,color="La Rioja", group = 1)) +
+  geom_line(aes(y = Ceuta,color="Ceuta", group = 1)) +
+  geom_line(aes(y = Melilla,color="Melilla", group = 1)) +
+  geom_line(aes(y=`Total Nacional`,color="Total Nacional",group = 1))+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+
+
+```
+
+Este gráfico resulta difícil de interpretar pero nos permite ver que hay cierta diferencia de desempleo entre las CCAA, debido a motivos diferentes, como la población y el nº de plazas ofertadas, la importancia de otros sectores y el momento histórico que representa. Es el caso de Ceuta y Melilla que vemos que tienen bajo Paro, pero porque seguramente la oferta de empleo es alta en relación a la población, pero no podemos afirmar nada, puesto que no tenemos datos que lo refuten.
+
+A continuación, vamos a describir un mapa de correlaciones entre las diferentes CCAA.
+
+```{r}
+correlation_matrix = cor(desempleotb)
+summary(correlation_matrix)
+# Crear un gráfico de mapa de calor
+options(repr.plot.width = 100, repr.plot.height = 8)
+ggplot(data = reshape2::melt(correlation_matrix), aes(Var1, Var2, fill = value)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0, limit = c(-1,1),
+                       breaks = c(seq(-1, 1, by =0.1 ))) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size=6),
+        axis.text.y = element_text(size = 6)) +
+  labs(title = "Matriz de Correlaciones desemp",
+       x = "", y = "") +
+  coord_fixed()
+```
+
+Además de lo que hemos dicho que íbamos hacer, también hemos añadido un summary que nos permite conocer aproximaciones por CCAA y de esta forma podemos ver las más grandes tanto a nivel inverso como positivo. Tras observar ambas herrmamientas nos damos cuenta de que las correlaciones más fuertes son las inversas, es decir, aquellas en las que cuando aumenta el desempleo en una, en la otra se reduce. Esto es observable principalmente entre La Rioja y Comunidad Valenciana, que tiene un valor de -0.60310, puede deberse a ciertos factores como la diversificación de las actividades económicas, demografía u otros aspectos que podemos nombrar, pero que realmente con los datos que tenemos no podemos constatar.
+
+```{r}
+
+datos_long <- melt(desempleotb, id.vars = "fechass")
+
+# Trazar el boxplot general
+ggplot(datos_long, aes(x = Var2, y = value)) +
+  geom_boxplot(fill = "skyblue") +
+  labs(x = "Comunidad Autónoma", y = "% DESEMPLEO", 
+       title = "Boxplot del DESEMPLEO por Comunidad Autónoma") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotar etiquetas del eje x si es necesario
+
+
+outliersd <- boxplot(desempleotb[,-1], las=2)$out
+for (i in outliersd){
+  posiciones <- which(desempleotb == i, arr.ind = TRUE)
+  print(i)
+# Obtener los nombres de filas y columnas
+  nombres_filas <- rownames(desempleotb)[posiciones[, 1]]
+  nombres_columnas <- colnames(desempleotb)[posiciones[, 2]]
+  print(paste("El valor", i, "se encuentra en las siguientes posiciones:"))
+  for (i in 1:nrow(posiciones)) {
+  print(paste("Fila:", nombres_filas[i], ", Columna:", nombres_columnas[i]))
+}
+}
+outliersd
+```
+
+Tras realizar el gráfico de caja y bigotes vemos que se encuentran valores anómalos que pueden estar asociados al Coronavirus, para ver a qué CCAA y época pertenece hemos extraído con la función \$out los outliers asociados a cada posición, pero no lo hemos podido extraer de forma adecuada, ya que dichos valores están repetidos en otras posiciones y no representan adecuadamente lo que queremos, seguiremos tratándolo e intentando extraer la información correcta.Por otra parte observamos gran disparidad entre algunas comunidades, puesto que no hay una tendencia central.
+
+```{r}
+medias_d <- colMeans(desempleotb, na.rm = TRUE)
+media_general_d <- sum(medias_d) / length(medias_d)
+barplot(medias_d[order(medias_d, decreasing = TRUE)],las =2, main="Media % desempleo")# Suponiendo que ya has calculado las medias y las has almacenado en el vector "medias"
+abline(h = media_general_d, col = "red")
+
+par(pty="s")
+
+```
+
+Las disparidades en las tasas de desempleo entre diferentes regiones pueden estar influenciadas por una variedad de factores económicos, sociales y políticos. Aquí hay algunas posibles explicaciones para las diferencias en las tasas de desempleo industrial, por ejemplo entre Ceuta, Melilla y el País Vasco:
+
+**Estructura económica:** El País Vasco tiene una economía diversificada y altamente industrializada, con sectores como la industria manufacturera, la metalurgia, la automoción y la energía que son motores importantes de su economía. Estas industrias pueden ofrecer una amplia gama de oportunidades de empleo, lo que podría contribuir a tasas de desempleo más bajas en comparación con regiones con economías menos diversificadas.
+
+**Política industrial y apoyo gubernamental:** El País Vasco ha implementado políticas industriales activas y ha invertido en infraestructura, educación y capacitación laboral para apoyar el crecimiento y la competitividad de sus industrias. Estas políticas pueden haber contribuido a la creación de empleo y a la reducción del desempleo en la región.
+
+**Ubicación geográfica y acceso al mercado laboral:** Ceuta y Melilla son enclaves geográficos ubicados en la costa norte de África, con características geográficas y económicas diferentes a las del País Vasco. Su ubicación geográfica y su estatus especial pueden influir en la disponibilidad de empleo y en las oportunidades económicas. Además, pueden enfrentar desafíos adicionales en términos de acceso al mercado laboral continental y la competencia con otras regiones.
+
+
+Tras la realización de todo el trabajo de análisis para esta base de datos alcazamos la conclusión de que nos puede ayudar a la hora de agrupar diferentes comunidades autónomas.

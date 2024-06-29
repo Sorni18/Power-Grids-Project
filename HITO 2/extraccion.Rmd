@@ -1,0 +1,810 @@
+---
+title: "extraccion"
+author: "prado"
+date: "2024-05-20"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(jsonlite)
+library(httr)
+library(readxl)
+library(dplyr)
+library(tibble)
+library(tidyr)
+headers <- c(
+  `User-Agent` = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36",
+  `Accept` = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+  `Accept-Language` = "en-US,en;q=0.5",
+  `Accept-Encoding` = "gzip, deflate, br",
+  `Connection` = "keep-alive"
+)
+```
+
+## R Markdown
+
+```{r}
+columnas <- c('FECHA', 'PRECIO', 'DEMANDA',
+            'HIDRÁULICA', 'TURBINACIÓN BOMBEO', 'NUCLEAR', 'CARBÓN','DIÉSEL', 'TURBINA DE GAS','TURBINA DE VAPOR', 
+            'CICLO COMBINADO','EÓLICA','SOLAR FOTOVOLTAICA', 'SOLAR TÉRMICA','OTRAS RENOVABLES','COGENERACIÓN',
+            'RESIDUOS NO RENOVABLES','RESIDUOS RENOVABLES','GENERACIÓN TOTAL')
+df<- data.frame(matrix(ncol=length(columnas), nrow=4748))
+colnames(df) <- columnas
+df
+```
+```{r}
+fecha_inicio <- as.Date("2011-01-01")
+fecha_fin <- as.Date("2023-12-31")
+
+lista_fechas <- seq.Date(from = fecha_inicio, to = fecha_fin, by = "day")
+df$FECHA <- lista_fechas
+df
+```
+
+```{r}
+anios <- 2011:2023
+lista_demanda <- list()
+for (anio in anios) {
+  print(anio)
+  url <- paste0('https://apidatos.ree.es/es/datos/demanda/evolucion?start_date=', anio, '-01-01T00:00&end_date=', anio, '-12-31T23:59&time_trunc=day')
+  res <- GET(url, add_headers(.headers = headers))
+  
+  # Verificar si la solicitud fue exitosa
+  if (status_code(res) == 200) {
+    j <- fromJSON(content(res, "text"))
+    datos <- j$included
+    valores <- datos$attributes$values
+    demanda_anual <- sapply(valores, function(x) x$value)
+    lista_demanda <- c(lista_demanda, demanda_anual)
+  } else {
+    warning(paste("Error en la solicitud para el año", anio, "con código de estado:", status_code(res)))
+    Sys.sleep(2)
+  }
+}
+
+# Convertir la lista de demanda en un vector
+vector_demanda <- unlist(lista_demanda)
+
+
+df$DEMANDA <- vector_demanda
+
+# Mostrar el dataframe
+print(df)
+```
+
+```{r}
+precios <- read_excel("C:/Users/prado/Downloads/Preços do Mercado Diário_20110101_20240224.xlsx")
+p_dia <- list()
+
+# Iterar sobre cada fila del data frame 'precios'
+for (i in seq_len(nrow(precios))) {
+  # Saltar las dos primeras filas (similar a i >= 2 en Python)
+  if (i >= 3) {
+    unidad <- precios$`Unidades: [€/MW]`[i]
+    valor <- as.numeric(precios$`...4`[i]) / 24
+    
+    # Verificar si la unidad ya está en la lista, si no, agregarla
+    if (!unidad %in% names(p_dia)) {
+      p_dia[[unidad]] <- valor
+    } else {
+      # Si ya existe, sumar el valor actual
+      p_dia[[unidad]] <- p_dia[[unidad]] + valor
+    }
+  }
+}
+
+# Convertir la lista a un vector
+lista <- unlist(p_dia)
+
+df$PRECIO <- lista[1:4748]
+print(df)
+```
+
+```{r}
+lista_generacion <- c()
+
+# Iterar sobre cada año
+for (anio in anios) {
+  print(anio)
+  # Construir la URL para la solicitud de generación
+  url <- paste0('https://apidatos.ree.es/es/datos/generacion/estructura-generacion?start_date=', anio, '-01-01T00:00&end_date=', anio, '-12-31T23:59&time_trunc=day')
+  
+  # Realizar la solicitud HTTP
+  res <- GET(url, add_headers(.headers = headers))
+  
+  # Verificar si la solicitud fue exitosa
+  if (status_code(res) == 200) {
+    # Parsear la respuesta JSON
+    j <- fromJSON(content(res, "text", encoding = "UTF-8"))
+    # Obtener los datos de generación (según la lógica proporcionada)
+    if (anio > 2013) {
+      valores <- j$included$attributes$values[[1]]$value
+    } else {
+      valores <- j$included$attributes$values[[1]]$value
+    }
+    print(class(valores))
+    # Extraer los valores y añadirlos a la lista
+    lista_generacion <- c(lista_generacion, valores)
+    print(lista_generacion)
+  } else {
+    warning(paste("Error en la solicitud para el año", anio, "con código de estado:", status_code(res)))
+  }
+}
+
+# Convertir la lista de generación en un vector
+
+df$HIDRÁULICA <- lista_generacion
+print(df)
+```
+
+```{r}
+lista_generacion <- c()
+
+# Iterar sobre cada año
+for (anio in anios) {
+  print(anio)
+  # Construir la URL para la solicitud de generación
+  url <- paste0('https://apidatos.ree.es/es/datos/generacion/estructura-generacion?start_date=', anio, '-01-01T00:00&end_date=', anio, '-12-31T23:59&time_trunc=day')
+  
+  # Realizar la solicitud HTTP
+  res <- GET(url, add_headers(.headers = headers))
+  
+  # Verificar si la solicitud fue exitosa
+  if (status_code(res) == 200) {
+    # Parsear la respuesta JSON
+    j <- fromJSON(content(res, "text", encoding = "UTF-8"))
+    # Obtener los datos de generación (según la lógica proporcionada)
+    if (anio > 2013) {
+      valores <- j$included$attributes$values[[2]]$value
+    } else {
+      valores <- j$included$attributes$values[[2]]$value
+    }
+    print(class(valores))
+    # Extraer los valores y añadirlos a la lista
+    lista_generacion <- c(lista_generacion, valores)
+  } else {
+    warning(paste("Error en la solicitud para el año", anio, "con código de estado:", status_code(res)))
+  }
+}
+
+# Convertir la lista de generación en un vector
+
+df$`TURBINACIÓN BOMBEO` <- lista_generacion
+print(df)
+```
+
+```{r}
+lista_generacion <- c()
+
+# Iterar sobre cada año
+for (anio in anios) {
+  print(anio)
+  # Construir la URL para la solicitud de generación
+  url <- paste0('https://apidatos.ree.es/es/datos/generacion/estructura-generacion?start_date=', anio, '-01-01T00:00&end_date=', anio, '-12-31T23:59&time_trunc=day')
+  
+  # Realizar la solicitud HTTP
+  res <- GET(url, add_headers(.headers = headers))
+  
+  # Verificar si la solicitud fue exitosa
+  if (status_code(res) == 200) {
+    # Parsear la respuesta JSON
+    j <- fromJSON(content(res, "text", encoding = "UTF-8"))
+    # Obtener los datos de generación (según la lógica proporcionada)
+    if (anio > 2013) {
+      valores <- j$included$attributes$values[[3]]$value
+    } else {
+      valores <- j$included$attributes$values[[3]]$value
+    }
+    print(class(valores))
+    # Extraer los valores y añadirlos a la lista
+    lista_generacion <- c(lista_generacion, valores)
+  } else {
+    warning(paste("Error en la solicitud para el año", anio, "con código de estado:", status_code(res)))
+  }
+}
+
+# Convertir la lista de generación en un vector
+
+df$NUCLEAR <- lista_generacion
+print(df)
+```
+
+```{r}
+lista_generacion <- c()
+
+# Iterar sobre cada año
+for (anio in anios) {
+  print(anio)
+  # Construir la URL para la solicitud de generación
+  url <- paste0('https://apidatos.ree.es/es/datos/generacion/estructura-generacion?start_date=', anio, '-01-01T00:00&end_date=', anio, '-12-31T23:59&time_trunc=day')
+  
+  # Realizar la solicitud HTTP
+  res <- GET(url, add_headers(.headers = headers))
+  
+  # Verificar si la solicitud fue exitosa
+  if (status_code(res) == 200) {
+    # Parsear la respuesta JSON
+    j <- fromJSON(content(res, "text", encoding = "UTF-8"))
+    # Obtener los datos de generación (según la lógica proporcionada)
+    if (anio > 2013) {
+      valores <- j$included$attributes$values[[4]]$value
+    } else {
+      valores <- j$included$attributes$values[[4]]$value
+    }
+    print(class(valores))
+    # Extraer los valores y añadirlos a la lista
+    lista_generacion <- c(lista_generacion, valores)
+  } else {
+    warning(paste("Error en la solicitud para el año", anio, "con código de estado:", status_code(res)))
+  }
+}
+
+# Convertir la lista de generación en un vector
+
+df$CARBÓN <- lista_generacion
+print(df)
+```
+
+```{r}
+lista_generacion <- c()
+
+# Iterar sobre cada año
+for (anio in anios) {
+  print(anio)
+  # Construir la URL para la solicitud de generación
+  url <- paste0('https://apidatos.ree.es/es/datos/generacion/estructura-generacion?start_date=', anio, '-01-01T00:00&end_date=', anio, '-12-31T23:59&time_trunc=day')
+  
+  # Realizar la solicitud HTTP
+  res <- GET(url, add_headers(.headers = headers))
+  
+  # Verificar si la solicitud fue exitosa
+  if (status_code(res) == 200) {
+    # Parsear la respuesta JSON
+    j <- fromJSON(content(res, "text", encoding = "UTF-8"))
+    # Obtener los datos de generación (según la lógica proporcionada)
+    if (anio > 2013) {
+      valores <- j$included$attributes$values[[6]]$value
+    } else {
+      valores <- j$included$attributes$values[[6]]$value
+    }
+    print(class(valores))
+    # Extraer los valores y añadirlos a la lista
+    lista_generacion <- c(lista_generacion, valores)
+  } else {
+    warning(paste("Error en la solicitud para el año", anio, "con código de estado:", status_code(res)))
+  }
+}
+
+# Convertir la lista de generación en un vector
+
+df$DIÉSEL <- lista_generacion
+print(df)
+```
+
+```{r}
+lista_generacion <- c()
+
+# Iterar sobre cada año
+for (anio in anios) {
+  print(anio)
+  # Construir la URL para la solicitud de generación
+  url <- paste0('https://apidatos.ree.es/es/datos/generacion/estructura-generacion?start_date=', anio, '-01-01T00:00&end_date=', anio, '-12-31T23:59&time_trunc=day')
+  
+  # Realizar la solicitud HTTP
+  res <- GET(url, add_headers(.headers = headers))
+  
+  # Verificar si la solicitud fue exitosa
+  if (status_code(res) == 200) {
+    # Parsear la respuesta JSON
+    j <- fromJSON(content(res, "text", encoding = "UTF-8"))
+    # Obtener los datos de generación (según la lógica proporcionada)
+    if (anio > 2013) {
+      valores <- j$included$attributes$values[[7]]$value
+    } else {
+      valores <- j$included$attributes$values[[7]]$value
+    }
+    print(class(valores))
+    # Extraer los valores y añadirlos a la lista
+    lista_generacion <- c(lista_generacion, valores)
+  } else {
+    warning(paste("Error en la solicitud para el año", anio, "con código de estado:", status_code(res)))
+  }
+}
+
+# Convertir la lista de generación en un vector
+
+df$`TURBINA DE GAS` <- lista_generacion
+print(df)
+```
+
+```{r}
+lista_generacion <- c()
+
+# Iterar sobre cada año
+for (anio in anios) {
+  print(anio)
+  # Construir la URL para la solicitud de generación
+  url <- paste0('https://apidatos.ree.es/es/datos/generacion/estructura-generacion?start_date=', anio, '-01-01T00:00&end_date=', anio, '-12-31T23:59&time_trunc=day')
+  
+  # Realizar la solicitud HTTP
+  res <- GET(url, add_headers(.headers = headers))
+  
+  # Verificar si la solicitud fue exitosa
+  if (status_code(res) == 200) {
+    # Parsear la respuesta JSON
+    j <- fromJSON(content(res, "text", encoding = "UTF-8"))
+    # Obtener los datos de generación (según la lógica proporcionada)
+    if (anio > 2013) {
+      valores <- j$included$attributes$values[[8]]$value
+    } else {
+      valores <- j$included$attributes$values[[8]]$value
+    }
+    print(class(valores))
+    # Extraer los valores y añadirlos a la lista
+    lista_generacion <- c(lista_generacion, valores)
+  } else {
+    warning(paste("Error en la solicitud para el año", anio, "con código de estado:", status_code(res)))
+  }
+}
+
+# Convertir la lista de generación en un vector
+
+df$`TURBINA DE VAPOR` <- lista_generacion
+print(df)
+```
+
+```{r}
+lista_generacion <- c()
+
+# Iterar sobre cada año
+for (anio in anios) {
+  print(anio)
+  # Construir la URL para la solicitud de generación
+  url <- paste0('https://apidatos.ree.es/es/datos/generacion/estructura-generacion?start_date=', anio, '-01-01T00:00&end_date=', anio, '-12-31T23:59&time_trunc=day')
+  
+  # Realizar la solicitud HTTP
+  res <- GET(url, add_headers(.headers = headers))
+  
+  # Verificar si la solicitud fue exitosa
+  if (status_code(res) == 200) {
+    # Parsear la respuesta JSON
+    j <- fromJSON(content(res, "text", encoding = "UTF-8"))
+    # Obtener los datos de generación (según la lógica proporcionada)
+    if (anio > 2013) {
+      valores <- j$included$attributes$values[[9]]$value
+    } else {
+      valores <- j$included$attributes$values[[9]]$value
+    }
+    print(class(valores))
+    # Extraer los valores y añadirlos a la lista
+    lista_generacion <- c(lista_generacion, valores)
+  } else {
+    warning(paste("Error en la solicitud para el año", anio, "con código de estado:", status_code(res)))
+  }
+}
+
+# Convertir la lista de generación en un vector
+
+df$`CICLO COMBINADO` <- lista_generacion
+print(df)
+```
+
+```{r}
+lista_generacion <- c()
+
+# Iterar sobre cada año
+for (anio in anios) {
+  print(anio)
+  # Construir la URL para la solicitud de generación
+  url <- paste0('https://apidatos.ree.es/es/datos/generacion/estructura-generacion?start_date=', anio, '-01-01T00:00&end_date=', anio, '-12-31T23:59&time_trunc=day')
+  
+  # Realizar la solicitud HTTP
+  res <- GET(url, add_headers(.headers = headers))
+  
+  # Verificar si la solicitud fue exitosa
+  if (status_code(res) == 200) {
+    # Parsear la respuesta JSON
+    j <- fromJSON(content(res, "text", encoding = "UTF-8"))
+    # Obtener los datos de generación (según la lógica proporcionada)
+    if (anio > 2013) {
+      valores <- j$included$attributes$values[[11]]$value
+    } 
+    else {
+      valores <- j$included$attributes$values[[10]]$value
+    }
+    # Extraer los valores y añadirlos a la lista
+    lista_generacion <- c(lista_generacion, valores)
+  } else {
+    warning(paste("Error en la solicitud para el año", anio, "con código de estado:", status_code(res)))
+  }
+}
+
+# Convertir la lista de generación en un vector
+
+df$EÓLICA <- lista_generacion
+print(df)
+```
+
+ 
+```{r}
+lista_generacion <- c()
+
+# Iterar sobre cada año
+for (anio in anios) {
+  print(anio)
+  # Construir la URL para la solicitud de generación
+  url <- paste0('https://apidatos.ree.es/es/datos/generacion/estructura-generacion?start_date=', anio, '-01-01T00:00&end_date=', anio, '-12-31T23:59&time_trunc=day')
+  
+  # Realizar la solicitud HTTP
+  res <- GET(url, add_headers(.headers = headers))
+  
+  # Verificar si la solicitud fue exitosa
+  if (status_code(res) == 200) {
+    # Parsear la respuesta JSON
+    j <- fromJSON(content(res, "text", encoding = "UTF-8"))
+    # Obtener los datos de generación (según la lógica proporcionada)
+    if (anio > 2013) {
+      valores <- j$included$attributes$values[[12]]$value
+    } 
+    else {
+      valores <- j$included$attributes$values[[11]]$value
+    }
+    # Extraer los valores y añadirlos a la lista
+    lista_generacion <- c(lista_generacion, valores)
+  } else {
+    warning(paste("Error en la solicitud para el año", anio, "con código de estado:", status_code(res)))
+  }
+}
+
+# Convertir la lista de generación en un vector
+
+df$`SOLAR FOTOVOLTAICA` <- lista_generacion
+print(df)
+```
+
+```{r}
+lista_generacion <- c()
+
+# Iterar sobre cada año
+for (anio in anios) {
+  print(anio)
+  # Construir la URL para la solicitud de generación
+  url <- paste0('https://apidatos.ree.es/es/datos/generacion/estructura-generacion?start_date=', anio, '-01-01T00:00&end_date=', anio, '-12-31T23:59&time_trunc=day')
+  
+  # Realizar la solicitud HTTP
+  res <- GET(url, add_headers(.headers = headers))
+  
+  # Verificar si la solicitud fue exitosa
+  if (status_code(res) == 200) {
+    # Parsear la respuesta JSON
+    j <- fromJSON(content(res, "text", encoding = "UTF-8"))
+    # Obtener los datos de generación (según la lógica proporcionada)
+    if (anio > 2013) {
+      valores <- j$included$attributes$values[[13]]$value
+    } 
+    else {
+      valores <- j$included$attributes$values[[12]]$value
+    }
+    # Extraer los valores y añadirlos a la lista
+    lista_generacion <- c(lista_generacion, valores)
+  } else {
+    warning(paste("Error en la solicitud para el año", anio, "con código de estado:", status_code(res)))
+  }
+}
+
+# Convertir la lista de generación en un vector
+
+df$`SOLAR TÉRMICA` <- c(lista_generacion, rep(lista_generacion[[length(lista_generacion)]], 4))
+print(df)
+```
+
+```{r}
+lista_generacion <- c()
+
+# Iterar sobre cada año
+for (anio in anios) {
+  print(anio)
+  # Construir la URL para la solicitud de generación
+  url <- paste0('https://apidatos.ree.es/es/datos/generacion/estructura-generacion?start_date=', anio, '-01-01T00:00&end_date=', anio, '-12-31T23:59&time_trunc=day')
+  
+  # Realizar la solicitud HTTP
+  res <- GET(url, add_headers(.headers = headers))
+  
+  # Verificar si la solicitud fue exitosa
+  if (status_code(res) == 200) {
+    # Parsear la respuesta JSON
+    j <- fromJSON(content(res, "text", encoding = "UTF-8"))
+    # Obtener los datos de generación (según la lógica proporcionada)
+    if (anio > 2013) {
+      valores <- j$included$attributes$values[[14]]$value
+    } 
+    else {
+      valores <- j$included$attributes$values[[13]]$value
+    }
+    # Extraer los valores y añadirlos a la lista
+    lista_generacion <- c(lista_generacion, valores)
+  } else {
+    warning(paste("Error en la solicitud para el año", anio, "con código de estado:", status_code(res)))
+  }
+}
+
+# Convertir la lista de generación en un vector
+
+df$`OTRAS RENOVABLES` <- c(lista_generacion)
+print(df)
+```
+
+```{r}
+lista_generacion <- c()
+
+# Iterar sobre cada año
+for (anio in anios) {
+  print(anio)
+  # Construir la URL para la solicitud de generación
+  url <- paste0('https://apidatos.ree.es/es/datos/generacion/estructura-generacion?start_date=', anio, '-01-01T00:00&end_date=', anio, '-12-31T23:59&time_trunc=day')
+  
+  # Realizar la solicitud HTTP
+  res <- GET(url, add_headers(.headers = headers))
+  
+  # Verificar si la solicitud fue exitosa
+  if (status_code(res) == 200) {
+    # Parsear la respuesta JSON
+    j <- fromJSON(content(res, "text", encoding = "UTF-8"))
+    # Obtener los datos de generación (según la lógica proporcionada)
+    if (anio > 2013) {
+      valores <- j$included$attributes$values[[15]]$value
+    } 
+    else {
+      valores <- j$included$attributes$values[[14]]$value
+    }
+    # Extraer los valores y añadirlos a la lista
+    lista_generacion <- c(lista_generacion, valores)
+  } else {
+    warning(paste("Error en la solicitud para el año", anio, "con código de estado:", status_code(res)))
+  }
+}
+
+# Convertir la lista de generación en un vector
+
+df$COGENERACIÓN <- c(lista_generacion)
+print(df)
+```
+
+```{r}
+lista_generacion <- c()
+
+# Iterar sobre cada año
+for (anio in anios) {
+  print(anio)
+  # Construir la URL para la solicitud de generación
+  url <- paste0('https://apidatos.ree.es/es/datos/generacion/estructura-generacion?start_date=', anio, '-01-01T00:00&end_date=', anio, '-12-31T23:59&time_trunc=day')
+  
+  # Realizar la solicitud HTTP
+  res <- GET(url, add_headers(.headers = headers))
+  
+  # Verificar si la solicitud fue exitosa
+  if (status_code(res) == 200) {
+    # Parsear la respuesta JSON
+    j <- fromJSON(content(res, "text", encoding = "UTF-8"))
+    # Obtener los datos de generación (según la lógica proporcionada)
+    if (anio > 2013) {
+      valores <- j$included$attributes$values[[16]]$value
+    } 
+    else {
+      valores <- j$included$attributes$values[[15]]$value
+    }
+    # Extraer los valores y añadirlos a la lista
+    lista_generacion <- c(lista_generacion, valores)
+  } else {
+    warning(paste("Error en la solicitud para el año", anio, "con código de estado:", status_code(res)))
+  }
+}
+
+# Convertir la lista de generación en un vector
+
+df$`RESIDUOS NO RENOVABLES` <- c(lista_generacion)
+print(df)
+```
+
+```{r}
+lista_generacion <- c()
+
+# Iterar sobre cada año
+for (anio in anios) {
+  print(anio)
+  # Construir la URL para la solicitud de generación
+  url <- paste0('https://apidatos.ree.es/es/datos/generacion/estructura-generacion?start_date=', anio, '-01-01T00:00&end_date=', anio, '-12-31T23:59&time_trunc=day')
+  
+  # Realizar la solicitud HTTP
+  res <- GET(url, add_headers(.headers = headers))
+  
+  # Verificar si la solicitud fue exitosa
+  if (status_code(res) == 200) {
+    # Parsear la respuesta JSON
+    j <- fromJSON(content(res, "text", encoding = "UTF-8"))
+    # Obtener los datos de generación (según la lógica proporcionada)
+    if (anio > 2013) {
+      valores <- j$included$attributes$values[[17]]$value
+    } 
+    else {
+      valores <- j$included$attributes$values[[16]]$value
+    }
+    # Extraer los valores y añadirlos a la lista
+    lista_generacion <- c(lista_generacion, valores)
+  } else {
+    warning(paste("Error en la solicitud para el año", anio, "con código de estado:", status_code(res)))
+  }
+}
+
+# Convertir la lista de generación en un vector
+
+df$`RESIDUOS RENOVABLES` <- c(lista_generacion)
+print(df)
+```
+
+```{r}
+lista_generacion <- c()
+
+# Iterar sobre cada año
+for (anio in anios) {
+  print(anio)
+  # Construir la URL para la solicitud de generación
+  url <- paste0('https://apidatos.ree.es/es/datos/generacion/estructura-generacion?start_date=', anio, '-01-01T00:00&end_date=', anio, '-12-31T23:59&time_trunc=day')
+  
+  # Realizar la solicitud HTTP
+  res <- GET(url, add_headers(.headers = headers))
+  
+  # Verificar si la solicitud fue exitosa
+  if (status_code(res) == 200) {
+    # Parsear la respuesta JSON
+    j <- fromJSON(content(res, "text", encoding = "UTF-8"))
+    # Obtener los datos de generación (según la lógica proporcionada)
+    if (anio > 2013) {
+      valores <- j$included$attributes$values[[18]]$value
+    } 
+    else {
+      valores <- j$included$attributes$values[[17]]$value
+    }
+    # Extraer los valores y añadirlos a la lista
+    lista_generacion <- c(lista_generacion, valores)
+  } else {
+    warning(paste("Error en la solicitud para el año", anio, "con código de estado:", status_code(res)))
+  }
+}
+
+# Convertir la lista de generación en un vector
+
+df$`GENERACIÓN TOTAL` <- c(lista_generacion)
+print(df)
+```
+
+```{r}
+write.csv(df, "EXTRACCIÓN/datosesp_r.csv")
+```
+
+```{r}
+meses <- c()
+anios <- 2013:2023
+for (anio in anios){
+  for (mes in 1:12){
+     mes_formateado <- sprintf("%dM%02d", anio, mes)
+     meses <- c(meses, mes_formateado)
+  }
+}
+print(meses)
+```
+
+```{r}
+d <- list(
+  'Andalucía' = c('ccaa', '4'),
+  'Aragón' = c('ccaa', '5'),
+  'Cantabria' = c('ccaa', '6'),
+  'Castilla - La Mancha' = c('ccaa', '7'),
+  'Castilla y León' = c('ccaa', '8'),
+  'Cataluña' = c('ccaa', '9'),
+  'País Vasco' = c('ccaa', '10'),
+  'Asturias, Principado de' = c('ccaa', '11'),
+  'Madrid, Comunidad de' = c('ccaa', '13'),
+  'Navarra, Comunidad Foral de' = c('ccaa', '14'),
+  'Comunitat Valenciana' = c('ccaa', '15'),
+  'Extremadura' = c('ccaa', '16'),
+  'Galicia' = c('ccaa', '17'),
+  'Balears, Illes' = c('ccaa', '8743'),
+  'Canarias' = c('ccaa', '8742'),
+  'Rioja, La' = c('ccaa', '20'),
+  'Murcia, Región de' = c('ccaa', '21')
+)
+```
+
+```{r}
+obtener_datos <- function(region, lim, id) {
+  df <- tibble()
+  c <- list('Generación' = numeric(), 'Demanda' = numeric())
+  
+  for (año in anios) {
+    gen_url <- sprintf('https://apidatos.ree.es/es/datos/generacion/estructura-generacion?start_date=%d-01-01T00:00&end_date=%d-12-31T23:59&time_trunc=month&geo_trunc=electric_system&geo_limit=%s&geo_ids=%s', año, año, lim, id)
+    dem_url <- sprintf('https://apidatos.ree.es/en/datos/demanda/evolucion?start_date=%d-01-01T00:00&end_date=%d-12-31T23:59&time_trunc=month&geo_trunc=electric_system&geo_limit=%s&geo_ids=%s', año, año, lim, id)
+    
+    resg <- GET(gen_url)
+    resd <- GET(dem_url)
+    
+    if (http_type(resg) == "application/json" && http_type(resd) == "application/json") {
+      jg <- fromJSON(content(resg, "text", encoding = "UTF-8"))
+      jd <- fromJSON(content(resd, "text", encoding = "UTF-8"))
+      
+      generacion <- jg$included
+      valores_gen <- as.data.frame(generacion$attributes$values[length(generacion$type)])$value
+      c$Generación <- c(c$Generación, valores_gen)
+      
+      demanda <- jd$included
+      valores_dem <- as.data.frame(demanda$attributes$values[1])$value
+      c$Demanda <- c(c$Demanda, valores_dem)
+    } else {
+      warning(sprintf("Error al obtener datos para %s en el año %d", region, año))
+    }
+  }
+  
+  df <- tibble(Fuente = meses, Generación = c$Generación, Demanda = c$Demanda)
+  df <- pivot_longer(df, cols = c("Generación", "Demanda"), names_to = "Tipo", values_to = "Valor")
+  df <- pivot_wider(df, names_from = "Fuente", values_from = "Valor")
+  
+  write.csv(df, file = sprintf("EXTRACCIÓN/CCAA_3/%s_genvsdem.csv", region), row.names = TRUE)
+  print(region)
+}
+
+# Ejecutar la función para cada región
+for (region in names(d)) {
+  lim <- d[[region]][1]
+  id <- d[[region]][2]
+  obtener_datos(region, lim, id)
+}
+```
+
+```{r}
+obtener_datosf <- function(region, lim, id) {
+  anios <- 2013:2023
+  for (año in anios) {
+    gen_url <- sprintf('https://apidatos.ree.es/es/datos/generacion/estructura-generacion?start_date=%d-01-01T00:00&end_date=%d-12-31T23:59&time_trunc=month&geo_trunc=electric_system&geo_limit=%s&geo_ids=%s', año, año, lim, id)
+    
+    resg <- GET(gen_url)
+
+    if (http_type(resg) == "application/json") {
+      jg <- fromJSON(content(resg, "text", encoding = "UTF-8"))
+
+      generacion <- jg$included
+      if (año == 2013){
+        df <- data.frame(matrix(nrow=12*length(anios)))
+        fuentes <- list()
+        for (i in 1:length(generacion$type)) {
+        fuentes[[generacion$type[i]]] <- c()
+      }
+      }
+
+      for (i in 1:length(generacion$type)){
+        fuentes[[generacion$type[i]]] <- c(fuentes[[generacion$type[i]]], as.data.frame(generacion$attributes$values[i])$value)
+      }
+    } else {
+      warning(sprintf("Error al obtener datos para %s en el año %d", region, año))
+    }
+  }
+  
+  for (i in 1:length(generacion$type)){
+    if (length(fuentes[[generacion$type[i]]]) == 12*length(anios)){
+      df[[generacion[i, "type"]]] <- fuentes[[generacion$type[i]]]
+    }
+  }
+  df <- df[, -1]
+  
+  print(region)
+  print(df)
+  write.csv(df, file = sprintf("EXTRACCIÓN/CCAA/%s_gen.csv", region), row.names = TRUE)
+}
+
+# Ejecutar la función para cada región
+for (region in names(d)) {
+  lim <- d[[region]][1]
+  id <- d[[region]][2]
+  obtener_datosf(region, lim, id)
+}
+```
